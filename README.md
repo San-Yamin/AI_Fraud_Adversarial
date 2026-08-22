@@ -1,162 +1,281 @@
-# AI-Based Fraud Detection, Explainability, and Adversarial Robustness for Digital Banking Transactions
+# AI-Based Fraud Detection and Adversarial Robustness
 
-An experimental university project that uses the synthetic PaySim dataset to build and explain a fraud detector, evaluate constrained adversarial evasion, harden the model, and demonstrate monitoring concepts. It is a research prototype, not a live banking system.
+An end-to-end university research project for detecting fraudulent digital transactions,
+explaining model decisions, testing adversarial evasion, improving robustness, and
+monitoring model behaviour through an interactive dashboard.
 
-## Project flow
+> **Research notice:** This project uses synthetic PaySim data. It is an experimental
+> prototype, not a live banking system, and it is not connected to real financial APIs.
+
+## What this project demonstrates
+
+The project follows one reproducible workflow:
 
 ```text
-PaySim → Fraud Detection → SHAP Explainability → Adversarial Attack
-       → Multiple Attack Comparison → Model Hardening → Streamlit Dashboard
-       → Real-Time Transaction Simulation → Concept Drift
+PaySim data
+    ↓
+Baseline fraud detection
+    ↓
+SHAP explainability
+    ↓
+Constrained adversarial evasion
+    ↓
+Multiple attack comparison
+    ↓
+Adversarial model hardening
+    ↓
+Streamlit dashboard
+    ↓
+Simulated transaction stream
+    ↓
+Step-based concept drift analysis
 ```
 
-Implementation proceeds one phase at a time in this exact order:
+The main model family is XGBoost. Class imbalance is handled with SMOTE on training
+data only. The primary evaluation metrics are Precision, Recall, F1, and PR-AUC, with
+fraud Recall treated as especially important.
 
-1. Fraud Detection
-2. SHAP Explainability
-3. Adversarial Attack
-4. Multiple Attack Comparison
-5. Model Hardening
-6. Streamlit Dashboard
-7. Real-Time Transaction Simulation
-8. Concept Drift
+## Completed phases
 
-Phases 1–4 provide the executable baseline fraud-detection, SHAP explainability, constrained test-only adversarial-evasion, and fair multiple-attack comparison workflows. No experimental results are committed; reported values must come from actual execution.
+| Phase | Component | Purpose |
+|---|---|---|
+| 1 | Baseline fraud detection | Preprocess PaySim, train XGBoost, and evaluate on untouched test data |
+| 2 | SHAP explainability | Provide global feature importance and local transaction explanations |
+| 3 | Adversarial evasion | Attack correctly detected test fraud using realistic feature constraints |
+| 4 | Attack comparison | Compare compatible ART attacks on a common evaluation population |
+| 5 | Model hardening | Generate training-side adversarial examples and train a separate hardened model |
+| 6 | Streamlit dashboard | Present saved metrics, figures, explanations, and predictions |
+| 7 | Real-time-style simulation | Replay a small PaySim sequence through the hardened model |
+| 8 | Concept drift | Evaluate performance and feature-distribution changes over PaySim `step` windows |
 
-## Environments and data
+All eight implementation phases are complete. Experimental values are never fabricated;
+final metrics and figures come from actual notebook or dashboard execution.
 
-Google Colab is the main experiment environment, and the Colab notebook is the main execution interface. GitHub stores code only. Store the PaySim CSV in Google Drive (the default configured path is `/content/drive/MyDrive/AI_Fraud_Adversarial/data/paysim.csv`) and never commit it to GitHub.
+## Important methodology safeguards
 
-- `DEVELOPMENT_MODE`: fast, memory-aware checks on a representative subset while retaining fraud examples.
-- `FULL_MODE`: final experiments on the intended dataset scope within available Colab resources.
+- `isFraud` is the target and is never used as an input feature.
+- `isFlaggedFraud` is removed because it can leak fraud-related information.
+- High-cardinality identifiers such as `nameOrig` and `nameDest` are excluded.
+- The train/test split happens before SMOTE.
+- SMOTE is applied only to training data.
+- Held-out test transactions remain unchanged and evaluation-only.
+- Phase 3 and Phase 4 adversarial test examples are never used for training.
+- Phase 5 adversarial training examples originate only from training fraud.
+- The baseline and hardened models are stored separately.
+- Random seeds make sampling and evaluation reproducible.
+- Adversarial changes follow explicit ranges, mutability rules, and feature dependencies.
 
-The active mode and paths are configured in `src/config.py`.
+## Technology stack
 
-## Directory structure
+- Python
+- pandas and NumPy
+- scikit-learn and imbalanced-learn
+- XGBoost
+- SHAP
+- IBM Adversarial Robustness Toolbox (ART)
+- Matplotlib and Seaborn
+- Streamlit
+- Google Colab and Google Drive
+
+## Repository structure
 
 ```text
 AI_Fraud_Adversarial/
-├── PROJECT_BRIEF.md
-├── AGENTS.md
-├── README.md
-├── requirements-colab.txt
-├── .gitignore
-├── data/
-│   └── README.md
+├── app.py                         # Streamlit dashboard
 ├── notebooks/
 │   └── fraud_adversarial_colab.ipynb
 ├── src/
-│   ├── __init__.py
-│   ├── config.py
-│   ├── data_loader.py
-│   ├── preprocessing.py
-│   ├── train.py
-│   ├── evaluate.py
-│   ├── visualization.py
-│   ├── explainability.py
-│   ├── attack.py
-│   ├── attack_comparison.py
-│   ├── hardening.py
-│   ├── dashboard_utils.py
-│   ├── realtime_simulation.py
-│   └── concept_drift.py
-├── app.py
-├── tests/
-│   ├── test_smoke.py
-│   └── test_data_leakage.py
-└── outputs/
-    ├── metrics/
-    ├── figures/
-    ├── models/
-    └── shap/
+│   ├── config.py                  # Paths, seeds, run modes, and experiment limits
+│   ├── data_loader.py             # Memory-aware PaySim loading
+│   ├── preprocessing.py           # Feature engineering, encoding, and training-only SMOTE
+│   ├── train.py                   # Split and baseline model training
+│   ├── evaluate.py                # Clean and adversarial evaluation metrics
+│   ├── visualization.py           # Experiment figures
+│   ├── explainability.py          # Phase 2 SHAP workflow
+│   ├── attack.py                  # Constrained ART attacks and threat model
+│   ├── attack_comparison.py       # Phase 4 comparison workflow
+│   ├── hardening.py               # Leakage-safe adversarial training
+│   ├── dashboard_utils.py         # Artifact loading and transaction inference
+│   ├── realtime_simulation.py     # Phase 7 stream simulation
+│   └── concept_drift.py           # Phase 8 chronological analysis
+├── tests/                         # Unit, leakage, attack, dashboard, and drift tests
+├── outputs/                       # Local output structure; generated results are not committed
+├── data/                          # Dataset documentation; PaySim CSV is not committed
+├── requirements-colab.txt         # Full Colab experiment environment
+├── requirements.txt               # Streamlit deployment environment
+├── PROJECT_BRIEF.md                # Complete project specification
+└── AGENTS.md                       # Permanent implementation rules
 ```
 
-## Results and artifacts
+## Data and saved artifacts
 
-Actual metrics, figures, serialized models, and SHAP artifacts are saved under `outputs/metrics`, `outputs/figures`, `outputs/models`, and `outputs/shap`. Google Drive should be used for persistent Colab outputs. Baseline and hardened artifacts will use separate names and will never overwrite one another.
+PaySim is a synthetic mobile-money dataset. Download it separately and keep the original
+CSV unchanged. The expected Colab location is:
 
-## Tests
+```text
+/content/drive/MyDrive/AI_Fraud_Adversarial/data/paysim.csv
+```
 
-After installing dependencies, run:
+The default persistent output directory is:
+
+```text
+/content/drive/MyDrive/AI_Fraud_Adversarial/outputs
+```
+
+Generated artifacts use the following structure:
+
+```text
+outputs/
+├── models/       # Baseline model, hardened model, preprocessor, feature names
+├── metrics/      # JSON and CSV evaluation results
+├── figures/      # Performance, attack, hardening, simulation, and drift figures
+└── shap/         # Global and local SHAP outputs
+```
+
+The dataset, serialized models, and full experimental outputs are intentionally not
+committed to GitHub. They are stored in Google Drive when experiments run in Colab.
+
+## Run the experiments in Google Colab
+
+1. Open `notebooks/fraud_adversarial_colab.ipynb` in Google Colab.
+2. Clone the repository to `/content/AI_Fraud_Adversarial` if it is not already present.
+3. Mount Google Drive.
+4. Place `paysim.csv` in the configured Drive data directory.
+5. Run notebook cells in numerical order.
+6. Keep the runtime alive when practical; deterministic reconstruction is used after a restart.
+
+Install the Colab dependencies with:
 
 ```bash
-python -m pytest tests/test_smoke.py tests/test_data_leakage.py -q
+pip install -r requirements-colab.txt
 ```
 
-For all Phase 1 unit tests, run:
+### Development and full modes
+
+The run mode is controlled through `RUN_MODE`:
 
 ```bash
-python -m pytest tests/test_smoke.py tests/test_data_leakage.py tests/test_phase1.py -q
+RUN_MODE=DEVELOPMENT_MODE
 ```
 
-Include the Phase 2 explainability tests with:
+- `DEVELOPMENT_MODE` uses small, class-aware, reproducible samples for practical Colab testing.
+- `FULL_MODE` uses the intended larger experiment scope within available memory.
+
+Other paths and experiment budgets can be overridden with environment variables defined
+in `src/config.py`.
+
+## Run the dashboard locally
+
+Create an environment and install the dashboard dependencies:
 
 ```bash
-python -m pytest tests/test_smoke.py tests/test_data_leakage.py tests/test_phase1.py tests/test_explainability.py -q
+git clone https://github.com/San-Yamin/AI_Fraud_Adversarial.git
+cd AI_Fraud_Adversarial
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 ```
 
-Include the Phase 3 constraint and attack-evaluation tests with:
+Point the app to saved outputs and start Streamlit:
 
 ```bash
-python -m pytest tests/test_smoke.py tests/test_data_leakage.py tests/test_phase1.py tests/test_explainability.py tests/test_attack.py -q
+OUTPUT_DIR=/path/to/AI_Fraud_Adversarial/outputs \
+PAYSIM_DATASET_PATH=/path/to/paysim.csv \
+streamlit run app.py
 ```
 
-Include the Phase 4 comparison tests with:
+The dataset path is needed only for the transaction simulation and concept-drift pages.
+The overview and saved-results pages do not load the full PaySim dataset.
 
-```bash
-python -m pytest tests/test_smoke.py tests/test_data_leakage.py tests/test_phase1.py tests/test_explainability.py tests/test_attack.py tests/test_attack_comparison.py -q
-```
+## Dashboard sections
 
-## Phase 6 dashboard
+The Streamlit application includes:
 
-The Streamlit dashboard reads saved Phase 1–5 artifacts only. It does not retrain a
-model or load the PaySim CSV. When artifacts are outside the repository's `outputs/`
-directory, set `OUTPUT_DIR` or change the path in the dashboard sidebar.
+1. **Project Overview** — workflow and research scope.
+2. **Baseline Performance** — saved Precision, Recall, F1, PR-AUC, confusion matrix, and PR curve.
+3. **SHAP Explainability** — global importance, beeswarm, fraud waterfall, and legitimate waterfall.
+4. **Attack Comparison** — attack table and evasion, recall, perturbation, and runtime figures.
+5. **Baseline vs Hardened** — clean and adversarial robustness comparison.
+6. **Single Transaction** — baseline and hardened predictions using the saved preprocessor.
+7. **Real-Time Simulation** — start, pause, reset, monitor, and export a simulated PaySim stream.
+8. **Concept Drift** — chronological metrics and feature-drift analysis across PaySim windows.
 
-Local run:
+The dashboard reads existing artifacts and does not retrain either model.
+
+## Streamlit Community Cloud deployment
+
+The public app is deployed from `app.py` on the `main` branch. Streamlit Cloud uses the
+root `requirements.txt` file.
+
+The source repository does not contain Google Drive artifacts. A complete hosted demo
+must make the required models, metrics, figures, and a small synthetic PaySim sample
+available inside the deployment environment. Do not publish the full PaySim CSV, secrets,
+credentials, or private data.
+
+Recommended deployment settings:
+
+- Entrypoint: `app.py`
+- Python: 3.11
+- Output path: set `OUTPUT_DIR` to the deployed artifact directory
+- Demo data: use a small reproducible PaySim sample for Phase 7 and Phase 8
+
+## Testing
+
+Install the complete development environment, then run all tests:
 
 ```bash
 python -m pip install -r requirements-colab.txt
-OUTPUT_DIR=/path/to/AI_Fraud_Adversarial/outputs streamlit run app.py
+python -m pytest -q
 ```
 
-For a Colab presentation, mount Drive, change into the cloned repository, and run:
+The suite covers:
 
-```python
-%env OUTPUT_DIR=/content/drive/MyDrive/AI_Fraud_Adversarial/outputs
-!streamlit run app.py --server.port 8501 &>/content/streamlit.log &
-from google.colab import output
-output.serve_kernel_port_as_window(8501)
+- Phase 1 preprocessing, splitting, training, and evaluation
+- train/test leakage protections
+- SHAP sampling and explanation helpers
+- adversarial constraints and attack evaluation
+- multiple-attack comparison
+- leakage-safe model hardening
+- dashboard artifact loading and prediction preprocessing
+- real-time sequence creation, running metrics, and reset behaviour
+- concept-drift windows, metrics, drift scores, and no-target-leakage rules
+
+## Key output files
+
+Important saved files include:
+
+```text
+outputs/models/baseline_model.joblib
+outputs/models/hardened_model.joblib
+outputs/models/baseline_preprocessor.joblib
+outputs/models/feature_names.joblib
+outputs/metrics/phase1_baseline_metrics.json
+outputs/metrics/phase3_attack_metrics.json
+outputs/metrics/phase4_attack_comparison.csv
+outputs/metrics/phase4_attack_comparison.json
+outputs/metrics/phase5_hardened_metrics.json
+outputs/metrics/phase5_hardening_comparison.csv
+outputs/metrics/phase7_simulation_results.csv
+outputs/metrics/phase8_concept_drift.csv
+outputs/metrics/phase8_concept_drift.json
 ```
 
-## Phase 7 simulated transaction stream
+SHAP plots and the remaining presentation figures are saved under `outputs/shap/` and
+`outputs/figures/`.
 
-The dashboard's **Real-Time Simulation** section now scans PaySim in chunks and retains
-only a small seeded, class-aware sequence. It sends each row through the saved Phase 1
-preprocessor and hardened model, while retaining `isFraud` only for display metrics.
-Start the dashboard with the same Phase 6 command and set `PAYSIM_DATASET_PATH` when needed:
+## Limitations
 
-```bash
-PAYSIM_DATASET_PATH=/path/to/paysim.csv \
-OUTPUT_DIR=/path/to/outputs streamlit run app.py
-```
+- PaySim is synthetic, so findings do not establish real-world banking performance.
+- Adversarial results depend on the defined threat model and practical Colab query budgets.
+- Real-time processing is a replay simulation, not a production transaction feed.
+- Concept drift is simulated through PaySim `step` ordering and is not proof of production drift.
+- The application is a research demonstration and must not be used to make live financial decisions.
 
-The simulation can be started, paused, reset to the same deterministic sequence, and
-exported to `outputs/metrics/phase7_simulation_results.csv`. It is a synthetic PaySim
-demonstration, not a connection to a live banking system.
+## Academic context
 
-## Phase 8 simulated concept drift
+- **Project type:** Individual university project
+- **Course:** Network & Internet Security (CST-8415)
+- **Primary environment:** Google Colab
+- **Dataset:** PaySim synthetic financial transactions
 
-The dashboard's **Concept Drift** section evaluates the unchanged hardened model across
-8–12 fixed, equal-width PaySim `step` ranges. It computes window-level fraud metrics and
-uses the mean two-sample Kolmogorov–Smirnov statistic over bounded samples of the top
-saved SHAP features. The analysis is experimental and does not demonstrate production drift.
-
-Launch Streamlit with the Phase 7 command, select **Concept Drift**, choose the window
-count, and click **Run concept drift analysis**. Results are saved to:
-
-- `outputs/metrics/phase8_concept_drift.csv`
-- `outputs/metrics/phase8_concept_drift.json`
-- `outputs/figures/phase8/`
-
-The hardened model is not retrained, and `isFraud` is used only to calculate metrics.
+For the exact methodology and phase requirements, see `PROJECT_BRIEF.md`.
