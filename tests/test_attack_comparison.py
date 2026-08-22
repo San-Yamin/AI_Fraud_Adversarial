@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 
+from src import config
 from src.attack import verify_comparison_attacks
 from src.attack_comparison import build_comparison_table, identify_comparison_findings
 
@@ -21,6 +22,27 @@ def metric(success, recall, perturbation, runtime, queries):
             "total_model_queries": queries,
         },
     }
+
+
+def test_phase4_config_names_match_notebook_contract():
+    expected = {
+        "ATTACK_INIT_EVAL": 50,
+        "ATTACK_INIT_SIZE": 30,
+        "ATTACK_MAX_EVAL": 500,
+        "ATTACK_MAX_ITER": 10,
+        "ATTACK_RELATIVE_BOUND": 0.10,
+        "PHASE4_ATTACK_SAMPLE_SIZE": config.ATTACK_SAMPLE_SIZE,
+        "BOUNDARY_MAX_ITER": 50,
+        "BOUNDARY_NUM_TRIAL": 10,
+        "BOUNDARY_SAMPLE_SIZE": 10,
+        "ZOO_LEARNING_RATE": 0.05,
+        "ZOO_MAX_ITER": 20,
+        "ZOO_NB_PARALLEL": 5,
+    }
+    for name, default in expected.items():
+        assert hasattr(config, name), name
+        value = getattr(config, name)
+        assert type(value) is type(default)
 
 
 def test_three_selected_attacks_are_art_black_box_compatible():
