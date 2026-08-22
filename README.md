@@ -21,7 +21,7 @@ Implementation proceeds one phase at a time in this exact order:
 7. Real-Time Transaction Simulation
 8. Concept Drift
 
-Phase 1 provides the executable baseline fraud-detection pipeline. No experimental results are committed; reported values must come from actual execution.
+Phases 1 and 2 provide the executable baseline fraud-detection and SHAP explainability workflows. No experimental results are committed; reported values must come from actual execution.
 
 ## Environments and data
 
@@ -87,4 +87,10 @@ For all Phase 1 unit tests, run:
 
 ```bash
 python -m pytest tests/test_smoke.py tests/test_data_leakage.py tests/test_phase1.py -q
+```
+
+Include the Phase 2 explainability tests with:
+
+```bash
+python -m pytest tests/test_smoke.py tests/test_data_leakage.py tests/test_phase1.py tests/test_explainability.py -q
 ```

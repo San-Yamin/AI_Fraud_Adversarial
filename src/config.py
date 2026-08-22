@@ -46,3 +46,10 @@ BASELINE_MODEL_PATH = MODELS_DIR / "baseline_model.joblib"
 FEATURE_NAMES_PATH = MODELS_DIR / "feature_names.joblib"
 PREPROCESSOR_PATH = MODELS_DIR / "baseline_preprocessor.joblib"
 BASELINE_METRICS_PATH = METRICS_DIR / "phase1_baseline_metrics.json"
+
+# Phase 2 keeps global explanations bounded for free Colab memory.
+SHAP_MAX_SAMPLES = int(os.getenv("SHAP_MAX_SAMPLES", "1000"))
+SHAP_MAX_FRAUD_SAMPLES = int(os.getenv("SHAP_MAX_FRAUD_SAMPLES", "250"))
+SHAP_MAX_DISPLAY = int(os.getenv("SHAP_MAX_DISPLAY", "15"))
+SHAP_IMPORTANCE_PATH = SHAP_DIR / "global_feature_importance.csv"
+SHAP_INTERPRETATION_PATH = SHAP_DIR / "phase2_interpretation.json"
