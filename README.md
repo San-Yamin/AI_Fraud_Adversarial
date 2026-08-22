@@ -207,17 +207,18 @@ The dashboard reads existing artifacts and does not retrain either model.
 The public app is deployed from `app.py` on the `main` branch. Streamlit Cloud uses the
 root `requirements.txt` file.
 
-The source repository does not contain Google Drive artifacts. A complete hosted demo
-must make the required models, metrics, figures, and a small synthetic PaySim sample
-available inside the deployment environment. Do not publish the full PaySim CSV, secrets,
-credentials, or private data.
+The source repository does not contain generated artifacts. On Streamlit Cloud, the app
+downloads the public deployment artifact bundle into temporary storage, validates the ZIP,
+and loads the saved models, metrics, and figures from its extracted `outputs/` directory.
+Set `DEPLOYMENT_ARTIFACT_FILE_ID` to replace the configured Google Drive bundle without a
+code change. Do not publish the full PaySim CSV, secrets, credentials, or private data.
 
 Recommended deployment settings:
 
 - Entrypoint: `app.py`
 - Python: 3.11
-- Output path: set `OUTPUT_DIR` to the deployed artifact directory
-- Demo data: use a small reproducible PaySim sample for Phase 7 and Phase 8
+- Output path: resolved automatically from the downloaded deployment bundle
+- Demo data: a small reproducible PaySim sample is still required for Phase 7 and Phase 8
 
 ## Testing
 

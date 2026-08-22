@@ -25,3 +25,6 @@ outputs/models/*
 *.pkl
 *.pickle
 *.xgb
+
+# Deployment bundles are downloaded at runtime, not committed.
+deployment/*.zip

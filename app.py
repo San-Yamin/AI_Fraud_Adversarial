@@ -32,6 +32,7 @@ from src.concept_drift import (
     plot_drift_summary,
     save_drift_outputs,
 )
+from src.deployment import prepare_deployment_artifacts
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -40,6 +41,13 @@ st.set_page_config(
     page_icon="🛡️",
     layout="wide",
 )
+
+deployment_outputs = None
+deployment_bootstrap_error = None
+try:
+    deployment_outputs = prepare_deployment_artifacts(PROJECT_ROOT)
+except (OSError, RuntimeError, ValueError) as error:
+    deployment_bootstrap_error = str(error)
 
 
 st.markdown(
@@ -196,7 +204,7 @@ def cached_concept_drift(dataset_path: str, output_path: str, n_windows: int):
     return summary, metadata, interpretation
 
 
-default_outputs = default_output_directory(PROJECT_ROOT)
+default_outputs = deployment_outputs or default_output_directory(PROJECT_ROOT)
 with st.sidebar:
     st.markdown(
         '<div class="brand"><div class="brand-mark">FS</div><div>'
@@ -232,6 +240,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 show_notice()
+if deployment_bootstrap_error:
+    st.error(f"Hosted artifact setup failed: {deployment_bootstrap_error}")
 
 if page == "Project Overview":
     page_header(
