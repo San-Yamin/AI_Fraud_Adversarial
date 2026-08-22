@@ -120,6 +120,10 @@ st.markdown(
         border-color:#D1D5DB; border-radius:.45rem; background:#FFFFFF;
     }
     [data-testid="stAlert"] {border-radius:.55rem; border:1px solid var(--border);}
+    [data-testid="stImage"] {width:100% !important;}
+    [data-testid="stImage"] img {
+        display:block; width:100% !important; max-width:100% !important; height:auto !important;
+    }
     hr {border-color:var(--border); margin:2rem 0 1rem;}
     @media (max-width: 800px) {
         .block-container {padding:1rem .8rem 2rem;}
