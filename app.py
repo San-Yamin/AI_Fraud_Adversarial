@@ -153,7 +153,7 @@ def show_image(path: Path, caption: str) -> None:
     with st.container(border=True):
         st.markdown(f"**{caption}**")
         if path.is_file():
-            st.image(str(path), use_container_width=True)
+            st.image(str(path), width="stretch")
         else:
             st.warning(f"Figure unavailable: `{path}`")
 
