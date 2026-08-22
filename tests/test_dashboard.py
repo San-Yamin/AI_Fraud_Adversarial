@@ -1,10 +1,12 @@
 """Dataset-free tests for Phase 6 artifact paths and prediction preprocessing."""
 
 import numpy as np
+import joblib
 
 from src.dashboard_utils import (
     artifact_paths,
     build_raw_transaction,
+    install_sklearn_joblib_compatibility,
     predict_transaction,
     risk_label,
     transform_transaction,
@@ -66,3 +68,15 @@ def test_artifact_contract_and_probability_risk_bands(tmp_path):
     assert risk_label(0.1) == "Low"
     assert risk_label(0.5) == "Medium"
     assert risk_label(0.9) == "High"
+
+
+def test_removed_sklearn_remainder_class_is_restored_for_joblib(monkeypatch, tmp_path):
+    import sklearn.compose._column_transformer as column_transformer
+
+    original_class = column_transformer._RemainderColsList
+    artifact = tmp_path / "older_preprocessor_fragment.joblib"
+    joblib.dump(original_class([1, 2], future_dtype="str"), artifact)
+    monkeypatch.delattr(column_transformer, "_RemainderColsList")
+    assert install_sklearn_joblib_compatibility() is True
+    restored = joblib.load(artifact)
+    assert list(restored) == [1, 2]

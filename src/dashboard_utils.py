@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections import UserList
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -22,6 +23,34 @@ MODEL_INPUT_COLUMNS = (
     "oldbalanceDest",
     "newbalanceDest",
 )
+
+
+class _DashboardRemainderColsList(UserList):
+    """Minimal load-compatible form of scikit-learn 1.5/1.6's private list."""
+
+    def __init__(
+        self, columns=(), *, future_dtype=None,
+        warning_was_emitted=False, warning_enabled=False,
+    ):
+        super().__init__(columns)
+        self.future_dtype = future_dtype
+        self.warning_was_emitted = warning_was_emitted
+        self.warning_enabled = warning_enabled
+
+
+def install_sklearn_joblib_compatibility() -> bool:
+    """Restore one removed private type needed only to read older preprocessors.
+
+    Scikit-learn 1.5/1.6 serialized ``ColumnTransformer.transformers_`` with
+    ``_RemainderColsList``. Newer releases removed that private class, causing
+    otherwise valid fitted preprocessors to fail during joblib deserialization.
+    """
+    import sklearn.compose._column_transformer as column_transformer
+
+    if hasattr(column_transformer, "_RemainderColsList"):
+        return False
+    column_transformer._RemainderColsList = _DashboardRemainderColsList
+    return True
 
 
 def default_output_directory(project_root: str | Path) -> Path:
@@ -94,6 +123,7 @@ def load_prediction_artifacts(paths: Mapping[str, Path]) -> tuple[Any, Any, Any,
     missing = [str(paths[name]) for name in required if not paths[name].is_file()]
     if missing:
         raise FileNotFoundError("Missing prediction artifacts: " + ", ".join(missing))
+    install_sklearn_joblib_compatibility()
     baseline = joblib.load(paths["baseline_model"])
     hardened = joblib.load(paths["hardened_model"])
     preprocessor = joblib.load(paths["preprocessor"])

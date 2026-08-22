@@ -248,7 +248,7 @@ elif page == "Single Transaction":
                     st.metric("Fraud probability", f"{result['fraud_probability']:.2%}")
                     st.metric("Risk band", result["risk_label"])
             st.caption("Low/Medium/High is a presentation band derived from probability, not a separately trained model.")
-    except (FileNotFoundError, ValueError, TypeError, KeyError) as error:
+    except (FileNotFoundError, ValueError, TypeError, KeyError, AttributeError) as error:
         st.error(str(error))
         st.info("Set the sidebar path to the outputs directory containing both models and preprocessing artifacts.")
 
