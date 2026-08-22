@@ -84,7 +84,7 @@ def default_dataset_path(project_root: str | Path) -> Path:
 
 
 def artifact_paths(output_dir: str | Path) -> dict[str, Path]:
-    """Return the complete Phase 1–5 dashboard artifact contract."""
+    """Return the complete Phase 1–8 dashboard artifact contract."""
     output = Path(output_dir)
     return {
         "baseline_model": output / "models" / "baseline_model.joblib",
@@ -112,6 +112,13 @@ def artifact_paths(output_dir: str | Path) -> dict[str, Path]:
         "phase5_attack_success": output / "figures" / "phase5" / "attack_success_comparison.png",
         "phase5_confusion": output / "figures" / "phase5" / "hardened_confusion_matrix.png",
         "phase7_results": output / "metrics" / "phase7_simulation_results.csv",
+        "phase8_csv": output / "metrics" / "phase8_concept_drift.csv",
+        "phase8_json": output / "metrics" / "phase8_concept_drift.json",
+        "phase8_fraud_rate": output / "figures" / "phase8" / "fraud_rate_over_time.png",
+        "phase8_recall": output / "figures" / "phase8" / "recall_over_time.png",
+        "phase8_f1": output / "figures" / "phase8" / "f1_over_time.png",
+        "phase8_probability": output / "figures" / "phase8" / "mean_fraud_probability_over_time.png",
+        "phase8_feature_drift": output / "figures" / "phase8" / "feature_drift_over_time.png",
     }
 
 

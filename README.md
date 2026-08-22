@@ -143,4 +143,20 @@ OUTPUT_DIR=/path/to/outputs streamlit run app.py
 
 The simulation can be started, paused, reset to the same deterministic sequence, and
 exported to `outputs/metrics/phase7_simulation_results.csv`. It is a synthetic PaySim
-demonstration, not a connection to a live banking system. Concept drift remains unimplemented.
+demonstration, not a connection to a live banking system.
+
+## Phase 8 simulated concept drift
+
+The dashboard's **Concept Drift** section evaluates the unchanged hardened model across
+8–12 fixed, equal-width PaySim `step` ranges. It computes window-level fraud metrics and
+uses the mean two-sample Kolmogorov–Smirnov statistic over bounded samples of the top
+saved SHAP features. The analysis is experimental and does not demonstrate production drift.
+
+Launch Streamlit with the Phase 7 command, select **Concept Drift**, choose the window
+count, and click **Run concept drift analysis**. Results are saved to:
+
+- `outputs/metrics/phase8_concept_drift.csv`
+- `outputs/metrics/phase8_concept_drift.json`
+- `outputs/figures/phase8/`
+
+The hardened model is not retrained, and `isFraud` is used only to calculate metrics.

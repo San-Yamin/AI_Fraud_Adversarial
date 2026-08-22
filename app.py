@@ -1,4 +1,4 @@
-"""Presentation dashboard for completed Phases 1–7 (no concept drift)."""
+"""Presentation dashboard for completed Phases 1–8."""
 
 from __future__ import annotations
 
@@ -25,6 +25,12 @@ from src.realtime_simulation import (
     predict_simulation_batch,
     reset_simulation_state,
     save_simulation_results,
+)
+from src.concept_drift import (
+    analyze_concept_drift,
+    interpret_drift,
+    plot_drift_summary,
+    save_drift_outputs,
 )
 
 
@@ -89,6 +95,27 @@ def cached_simulation_sequence(dataset_path: str, sample_size: int, seed: int):
     )
 
 
+@st.cache_data(show_spinner="Evaluating chronological PaySim windows…")
+def cached_concept_drift(dataset_path: str, output_path: str, n_windows: int):
+    drift_paths = artifact_paths(output_path)
+    _, hardened, preprocessor, feature_names = load_prediction_artifacts(drift_paths)
+    importance = (
+        load_csv(drift_paths["shap_importance_csv"])
+        if drift_paths["shap_importance_csv"].is_file() else None
+    )
+    summary, metadata = analyze_concept_drift(
+        dataset_path, hardened, preprocessor, feature_names,
+        importance=importance, n_windows=n_windows,
+    )
+    interpretation = interpret_drift(summary)
+    save_drift_outputs(
+        summary, metadata, interpretation,
+        drift_paths["phase8_csv"], drift_paths["phase8_json"],
+    )
+    plot_drift_summary(summary, Path(output_path) / "figures" / "phase8")
+    return summary, metadata, interpretation
+
+
 default_outputs = default_output_directory(PROJECT_ROOT)
 with st.sidebar:
     st.title("Fraud Security Lab")
@@ -103,6 +130,7 @@ with st.sidebar:
             "Baseline vs Hardened",
             "Single Transaction",
             "Real-Time Simulation",
+            "Concept Drift",
         ),
     )
     st.caption("The dashboard reads saved artifacts only. It does not retrain models.")
@@ -269,7 +297,7 @@ elif page == "Single Transaction":
         st.error(str(error))
         st.info("Set the sidebar path to the outputs directory containing both models and preprocessing artifacts.")
 
-else:
+elif page == "Real-Time Simulation":
     st.header("Real-Time Transaction Simulation")
     st.warning(
         "Simulated transaction stream using synthetic PaySim data. "
@@ -436,6 +464,76 @@ else:
     except (FileNotFoundError, ValueError, TypeError, KeyError, AttributeError) as error:
         st.error(str(error))
         st.info("Check the PaySim path and the saved hardened-model artifact directory.")
+
+else:
+    st.header("Concept Drift")
+    st.warning(
+        "Concept drift analysis is simulated using PaySim step-based chronological windows."
+    )
+    st.caption(
+        "The saved hardened model is evaluated without retraining. Fixed equal-width step "
+        "ranges are compared with Window 1 as the feature-distribution reference."
+    )
+    drift_dataset = st.text_input(
+        "PaySim CSV path", str(default_dataset_path(PROJECT_ROOT)), key="drift_dataset"
+    )
+    n_windows = st.slider("Chronological windows", min_value=8, max_value=12, value=8)
+    run_drift = st.button("Run concept drift analysis", type="primary")
+    refresh_drift = st.button("Clear cached analysis and rerun")
+    if refresh_drift:
+        cached_concept_drift.clear()
+        run_drift = True
+    if run_drift:
+        try:
+            drift_summary, drift_metadata, drift_interpretation = cached_concept_drift(
+                str(Path(drift_dataset).expanduser()),
+                str(Path(output_input).expanduser()), int(n_windows),
+            )
+            st.session_state.phase8_summary = drift_summary
+            st.session_state.phase8_metadata = drift_metadata
+            st.session_state.phase8_interpretation = drift_interpretation
+        except (FileNotFoundError, ValueError, TypeError, KeyError, AttributeError) as error:
+            st.error(str(error))
+    elif paths["phase8_csv"].is_file() and paths["phase8_json"].is_file():
+        try:
+            st.session_state.phase8_summary = load_csv(paths["phase8_csv"])
+            saved_payload = load_json(paths["phase8_json"])
+            st.session_state.phase8_metadata = saved_payload.get("metadata", {})
+            st.session_state.phase8_interpretation = saved_payload.get("interpretation", {})
+        except (FileNotFoundError, ValueError, KeyError) as error:
+            st.error(str(error))
+
+    if "phase8_summary" in st.session_state:
+        drift_summary = st.session_state.phase8_summary
+        interpretation = st.session_state.get("phase8_interpretation", {})
+        st.dataframe(drift_summary, use_container_width=True, hide_index=True)
+        cards = st.columns(4)
+        cards[0].metric("Maximum drift score", f"{interpretation.get('maximum_drift_score', float('nan')):.3f}")
+        cards[1].metric("Maximum drift level", interpretation.get("maximum_drift_level", "Unavailable"))
+        cards[2].metric(
+            "Meaningful feature drift",
+            "Observed" if interpretation.get("meaningful_feature_drift_observed") else "Not observed",
+        )
+        cards[3].metric(
+            "Performance degradation",
+            "Observed" if interpretation.get("performance_degradation_observed") else "Not observed",
+        )
+        st.info(interpretation.get("threshold_note", ""))
+        st.caption(interpretation.get("scope_note", ""))
+        figures = (
+            ("phase8_fraud_rate", "Fraud rate over time"),
+            ("phase8_recall", "Recall over time"),
+            ("phase8_f1", "F1 over time"),
+            ("phase8_probability", "Mean fraud probability over time"),
+            ("phase8_feature_drift", "Feature drift versus early reference"),
+        )
+        for row_start in range(0, len(figures), 2):
+            for column, (key, caption) in zip(
+                st.columns(2), figures[row_start:row_start + 2]
+            ):
+                with column:
+                    show_image(paths[key], caption)
+        st.success(f"Saved Phase 8 outputs under {Path(output_input).expanduser()}")
 
 st.divider()
 st.caption("CST-8415 research prototype · synthetic PaySim data · saved experimental artifacts only")

@@ -99,7 +99,7 @@ def test_notebook_contains_only_phase5_cells_38_through_46():
     for number in range(38, 47):
         assert any(f"Cell {number} —" in text for text in markdown)
     phase6 = next(text for text in markdown if text.startswith("# PHASE 6"))
-    assert "Not implemented." in phase6
+    assert "Implemented" in phase6
 
     cell38 = next(
         "".join(cell.get("source", []))
