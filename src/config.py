@@ -78,3 +78,15 @@ ZOO_NB_PARALLEL = int(os.getenv("ZOO_NB_PARALLEL", "5"))
 PHASE4_FIGURES_DIR = FIGURES_DIR / "phase4"
 PHASE4_COMPARISON_CSV_PATH = METRICS_DIR / "phase4_attack_comparison.csv"
 PHASE4_COMPARISON_JSON_PATH = METRICS_DIR / "phase4_attack_comparison.json"
+
+# Phase 5 uses training-origin fraud only and a small common test population.
+HARDENING_TRAIN_ATTACK_SAMPLE_SIZE = int(
+    os.getenv("HARDENING_TRAIN_ATTACK_SAMPLE_SIZE", "20" if DEVELOPMENT_MODE else "50")
+)
+HARDENING_TEST_ATTACK_SAMPLE_SIZE = int(
+    os.getenv("HARDENING_TEST_ATTACK_SAMPLE_SIZE", "10" if DEVELOPMENT_MODE else "20")
+)
+PHASE5_FIGURES_DIR = FIGURES_DIR / "phase5"
+HARDENED_MODEL_PATH = MODELS_DIR / "hardened_model.joblib"
+PHASE5_METRICS_PATH = METRICS_DIR / "phase5_hardened_metrics.json"
+PHASE5_COMPARISON_CSV_PATH = METRICS_DIR / "phase5_hardening_comparison.csv"

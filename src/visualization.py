@@ -143,3 +143,55 @@ def plot_attack_comparison(table: pd.DataFrame, output_dir: str | Path) -> list[
         _save(fig, directory / filename)
         figures.append(fig)
     return figures
+
+
+def plot_hardening_comparison(
+    comparison: pd.DataFrame,
+    hardened_confusion_matrix: Any,
+    output_dir: str | Path,
+) -> list[Any]:
+    """Save clean, adversarial, attack-success, and hardened-CM figures."""
+    directory = Path(output_dir)
+    figures = []
+
+    clean = comparison.iloc[0]
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.bar(
+        ["Baseline", "Hardened"],
+        [clean["Baseline Clean Recall"], clean["Hardened Clean Recall"]],
+    )
+    ax.set(title="Baseline vs Hardened Clean Recall", ylabel="Recall", ylim=(0, 1.05))
+    _save(fig, directory / "clean_recall_comparison.png")
+    figures.append(fig)
+
+    for baseline_column, hardened_column, title, filename in (
+        (
+            "Baseline Recall Under Attack", "Hardened Recall Under Attack",
+            "Recall Under Fresh Attack", "recall_under_attack_comparison.png",
+        ),
+        (
+            "Baseline Attack Success Rate", "Hardened Attack Success Rate",
+            "Attack Success Before vs After Hardening", "attack_success_comparison.png",
+        ),
+    ):
+        frame = comparison[["Attack", baseline_column, hardened_column]].melt(
+            id_vars="Attack", var_name="Model", value_name="Value"
+        )
+        frame["Model"] = frame["Model"].str.replace(
+            " Recall Under Attack", "", regex=False
+        ).str.replace(" Attack Success Rate", "", regex=False)
+        fig, ax = plt.subplots(figsize=(8, 4))
+        sns.barplot(data=frame, x="Attack", y="Value", hue="Model", ax=ax)
+        ax.set(title=title, xlabel="Attack", ylabel="Rate", ylim=(0, 1.05))
+        _save(fig, directory / filename)
+        figures.append(fig)
+
+    fig, ax = plt.subplots(figsize=(5, 4))
+    sns.heatmap(
+        hardened_confusion_matrix, annot=True, fmt="d", cmap="Blues",
+        xticklabels=["Legitimate", "Fraud"], yticklabels=["Legitimate", "Fraud"], ax=ax,
+    )
+    ax.set(title="Hardened Model Confusion Matrix", xlabel="Predicted", ylabel="Actual")
+    _save(fig, directory / "hardened_confusion_matrix.png")
+    figures.append(fig)
+    return figures
