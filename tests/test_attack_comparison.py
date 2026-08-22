@@ -1,6 +1,8 @@
 """Dataset-free tests for fair Phase 4 comparison and ranking."""
 
 from copy import deepcopy
+import json
+from pathlib import Path
 
 from src import config
 from src.attack import verify_comparison_attacks
@@ -43,6 +45,34 @@ def test_phase4_config_names_match_notebook_contract():
         assert hasattr(config, name), name
         value = getattr(config, name)
         assert type(value) is type(default)
+
+
+def test_cell29_uses_compatible_config_lookup_not_brittle_direct_import():
+    notebook_path = Path(__file__).parents[1] / "notebooks/fraud_adversarial_colab.ipynb"
+    notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
+    cell29_code = next(
+        "".join(cell["source"])
+        for cell in notebook["cells"]
+        if cell["cell_type"] == "code"
+        and "phase4_attack_parameters" in "".join(cell["source"])
+    )
+    assert "from src.config import" not in cell29_code
+    assert "from src import config as project_config" in cell29_code
+    for name in (
+        "ATTACK_INIT_EVAL",
+        "ATTACK_INIT_SIZE",
+        "ATTACK_MAX_EVAL",
+        "ATTACK_MAX_ITER",
+        "ATTACK_RELATIVE_BOUND",
+        "BOUNDARY_MAX_ITER",
+        "BOUNDARY_NUM_TRIAL",
+        "BOUNDARY_SAMPLE_SIZE",
+        "PHASE4_ATTACK_SAMPLE_SIZE",
+        "ZOO_LEARNING_RATE",
+        "ZOO_MAX_ITER",
+        "ZOO_NB_PARALLEL",
+    ):
+        assert name in cell29_code
 
 
 def test_three_selected_attacks_are_art_black_box_compatible():
