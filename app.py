@@ -1,8 +1,9 @@
-"""Presentation dashboard for completed Phases 1–5 (no Phase 7 simulation)."""
+"""Presentation dashboard for completed Phases 1–7 (no concept drift)."""
 
 from __future__ import annotations
 
 from pathlib import Path
+import time
 
 import pandas as pd
 import streamlit as st
@@ -10,11 +11,20 @@ import streamlit as st
 from src.dashboard_utils import (
     artifact_paths,
     available_transaction_types,
+    default_dataset_path,
     default_output_directory,
     load_csv,
     load_json,
     load_prediction_artifacts,
     predict_transaction,
+)
+from src.realtime_simulation import (
+    add_running_metrics,
+    calculate_running_metrics,
+    load_paysim_simulation_sequence,
+    predict_simulation_batch,
+    reset_simulation_state,
+    save_simulation_results,
 )
 
 
@@ -70,6 +80,13 @@ def metric_cards(metrics: dict) -> None:
 @st.cache_resource(show_spinner="Loading saved models…")
 def cached_prediction_artifacts(output_path: str):
     return load_prediction_artifacts(artifact_paths(output_path))
+
+
+@st.cache_data(show_spinner="Preparing a small reproducible PaySim sequence…")
+def cached_simulation_sequence(dataset_path: str, sample_size: int, seed: int):
+    return load_paysim_simulation_sequence(
+        dataset_path, sample_size=sample_size, random_state=seed,
+    )
 
 
 default_outputs = default_output_directory(PROJECT_ROOT)
@@ -254,11 +271,171 @@ elif page == "Single Transaction":
 
 else:
     st.header("Real-Time Transaction Simulation")
-    st.info("Planned for Phase 7 — not implemented in this dashboard phase.")
-    st.write(
-        "The future page will simulate PaySim rows arriving over time. It will not represent "
-        "a live banking feed."
+    st.warning(
+        "Simulated transaction stream using synthetic PaySim data. "
+        "Not connected to any live banking system."
     )
+    st.caption(
+        "A small class-aware sequence is read from PaySim in chunks. The actual isFraud "
+        "label is retained only for evaluation and is never passed to the model."
+    )
+
+    dataset_input = st.text_input(
+        "PaySim CSV path", str(default_dataset_path(PROJECT_ROOT)), key="simulation_dataset"
+    )
+    control_columns = st.columns(4)
+    with control_columns[0]:
+        transaction_count = st.number_input(
+            "Transactions", min_value=10, max_value=500, value=50, step=10
+        )
+    with control_columns[1]:
+        delay_seconds = st.slider(
+            "Delay (seconds)", min_value=0.0, max_value=3.0, value=0.5, step=0.1
+        )
+    with control_columns[2]:
+        batch_size = st.number_input(
+            "Batch size", min_value=1, max_value=10, value=1, step=1
+        )
+    with control_columns[3]:
+        deterministic = st.checkbox("Deterministic", value=True)
+        requested_seed = st.number_input("Random seed", value=42, step=1)
+
+    button_columns = st.columns(4)
+    start_clicked = button_columns[0].button("▶ Start", type="primary", use_container_width=True)
+    pause_clicked = button_columns[1].button("⏸ Stop / Pause", use_container_width=True)
+    reset_clicked = button_columns[2].button("↺ Reset", use_container_width=True)
+    export_clicked = button_columns[3].button("Save CSV", use_container_width=True)
+
+    try:
+        _, hardened_model, preprocessor, feature_names = cached_prediction_artifacts(
+            str(Path(output_input).expanduser())
+        )
+        if start_clicked:
+            selected_seed = int(requested_seed) if deterministic else int(time.time_ns() % (2**31 - 1))
+            configuration = (str(Path(dataset_input).expanduser()), int(transaction_count), selected_seed)
+            if (
+                "phase7_state" not in st.session_state
+                or st.session_state.get("phase7_configuration") != configuration
+            ):
+                sequence = cached_simulation_sequence(*configuration)
+                st.session_state.phase7_state = reset_simulation_state(sequence)
+                st.session_state.phase7_configuration = configuration
+            st.session_state.phase7_state["running"] = True
+            st.session_state.phase7_state["next_due"] = 0.0
+        if pause_clicked and "phase7_state" in st.session_state:
+            st.session_state.phase7_state["running"] = False
+        if reset_clicked and "phase7_state" in st.session_state:
+            sequence = st.session_state.phase7_state["sequence"]
+            st.session_state.phase7_state = reset_simulation_state(sequence)
+
+        @st.fragment(run_every=0.25)
+        def render_live_simulation() -> None:
+            if "phase7_state" not in st.session_state:
+                st.info("Choose the controls and press Start to prepare the simulation sequence.")
+                return
+            state = st.session_state.phase7_state
+            now = time.monotonic()
+            if state["running"] and now >= state["next_due"]:
+                start = int(state["position"])
+                end = min(start + int(batch_size), len(state["sequence"]))
+                if start < end:
+                    batch = state["sequence"].iloc[start:end]
+                    batch_results = predict_simulation_batch(
+                        batch, hardened_model, preprocessor, feature_names,
+                        sequence_start=start + 1,
+                    )
+                    state["results"] = (
+                        batch_results.reset_index(drop=True)
+                        if state["results"].empty
+                        else pd.concat([state["results"], batch_results], ignore_index=True)
+                    )
+                    state["position"] = end
+                    state["next_due"] = now + float(delay_seconds)
+                if state["position"] >= len(state["sequence"]):
+                    state["running"] = False
+
+            results = state["results"]
+            metrics = calculate_running_metrics(results)
+            progress = state["position"] / len(state["sequence"])
+            st.progress(progress, text=f"Processed {state['position']} of {len(state['sequence'])}")
+            st.caption("Status: " + ("Running" if state["running"] else "Paused / complete"))
+
+            first_row = st.columns(6)
+            for card, label, key in zip(
+                first_row,
+                ("Processed", "Actual fraud", "Detected fraud", "Missed fraud", "False positives", "True positives"),
+                ("total_processed", "actual_fraud", "detected_fraud", "missed_fraud", "false_positives", "true_positives"),
+            ):
+                card.metric(label, metrics[key])
+            second_row = st.columns(3)
+            second_row[0].metric("Running precision", f"{metrics['precision']:.3f}")
+            second_row[1].metric("Running recall", f"{metrics['recall']:.3f}")
+            second_row[2].metric("Running F1", f"{metrics['f1']:.3f}")
+
+            if results.empty:
+                return
+            latest = results.iloc[-1]
+            st.subheader("Latest transaction")
+            latest_columns = st.columns(7)
+            latest_values = (
+                ("Sequence", int(latest["transaction_sequence"])),
+                ("Step", int(latest["step"])),
+                ("Type", latest["type"]),
+                ("Amount", f"{latest['amount']:,.2f}"),
+                ("Fraud probability", f"{latest['fraud_probability']:.2%}"),
+                ("Prediction", latest["predicted_label"]),
+                ("Outcome", latest["status"]),
+            )
+            for column, (label, value) in zip(latest_columns, latest_values):
+                column.metric(label, value)
+            st.caption(f"Actual label: {latest['actual_label_name']}")
+
+            enriched = add_running_metrics(results)
+            chart_left, chart_right = st.columns(2)
+            with chart_left:
+                st.subheader("Fraud probability over sequence")
+                st.line_chart(
+                    enriched.set_index("transaction_sequence")[["fraud_probability"]]
+                )
+                st.subheader("Running recall")
+                st.line_chart(
+                    enriched.set_index("transaction_sequence")[["running_recall"]]
+                )
+            with chart_right:
+                st.subheader("Running prediction counts")
+                st.line_chart(
+                    enriched.set_index("transaction_sequence")[[
+                        "running_predicted_fraud", "running_predicted_legitimate"
+                    ]]
+                )
+                st.subheader("Recent transactions")
+                st.dataframe(
+                    results.tail(15)[[
+                        "transaction_sequence", "step", "type", "amount",
+                        "fraud_probability", "predicted_label", "actual_label_name", "status",
+                    ]],
+                    use_container_width=True, hide_index=True,
+                )
+
+        render_live_simulation()
+
+        if export_clicked:
+            if "phase7_state" not in st.session_state or st.session_state.phase7_state["results"].empty:
+                st.warning("Process at least one transaction before saving results.")
+            else:
+                saved_path = save_simulation_results(
+                    st.session_state.phase7_state["results"], paths["phase7_results"]
+                )
+                st.success(f"Saved actual simulation results to {saved_path}")
+        if "phase7_state" in st.session_state and not st.session_state.phase7_state["results"].empty:
+            csv_bytes = st.session_state.phase7_state["results"].to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "Download current results", csv_bytes,
+                file_name="phase7_simulation_results.csv", mime="text/csv",
+            )
+    except (FileNotFoundError, ValueError, TypeError, KeyError, AttributeError) as error:
+        st.error(str(error))
+        st.info("Check the PaySim path and the saved hardened-model artifact directory.")
 
 st.divider()
 st.caption("CST-8415 research prototype · synthetic PaySim data · saved experimental artifacts only")

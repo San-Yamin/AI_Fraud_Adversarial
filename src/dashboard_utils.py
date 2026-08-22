@@ -68,6 +68,21 @@ def default_output_directory(project_root: str | Path) -> Path:
     return next((path for path in candidates if path.exists()), candidates[-1])
 
 
+def default_dataset_path(project_root: str | Path) -> Path:
+    """Resolve PaySim without loading it, supporting local and Colab demos."""
+    root = Path(project_root)
+    candidates = []
+    if os.getenv("PAYSIM_DATASET_PATH"):
+        candidates.append(Path(os.environ["PAYSIM_DATASET_PATH"]))
+    candidates.extend(
+        [
+            Path("/content/drive/MyDrive/AI_Fraud_Adversarial/data/paysim.csv"),
+            root / "data" / "paysim.csv",
+        ]
+    )
+    return next((path for path in candidates if path.is_file()), candidates[0])
+
+
 def artifact_paths(output_dir: str | Path) -> dict[str, Path]:
     """Return the complete Phase 1–5 dashboard artifact contract."""
     output = Path(output_dir)
@@ -96,6 +111,7 @@ def artifact_paths(output_dir: str | Path) -> dict[str, Path]:
         "phase5_attack_recall": output / "figures" / "phase5" / "recall_under_attack_comparison.png",
         "phase5_attack_success": output / "figures" / "phase5" / "attack_success_comparison.png",
         "phase5_confusion": output / "figures" / "phase5" / "hardened_confusion_matrix.png",
+        "phase7_results": output / "metrics" / "phase7_simulation_results.csv",
     }
 
 

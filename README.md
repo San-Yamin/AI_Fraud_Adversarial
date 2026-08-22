@@ -129,4 +129,18 @@ from google.colab import output
 output.serve_kernel_port_as_window(8501)
 ```
 
-The Real-Time Simulation page is a Phase 7 placeholder and does not process transactions.
+## Phase 7 simulated transaction stream
+
+The dashboard's **Real-Time Simulation** section now scans PaySim in chunks and retains
+only a small seeded, class-aware sequence. It sends each row through the saved Phase 1
+preprocessor and hardened model, while retaining `isFraud` only for display metrics.
+Start the dashboard with the same Phase 6 command and set `PAYSIM_DATASET_PATH` when needed:
+
+```bash
+PAYSIM_DATASET_PATH=/path/to/paysim.csv \
+OUTPUT_DIR=/path/to/outputs streamlit run app.py
+```
+
+The simulation can be started, paused, reset to the same deterministic sequence, and
+exported to `outputs/metrics/phase7_simulation_results.csv`. It is a synthetic PaySim
+demonstration, not a connection to a live banking system. Concept drift remains unimplemented.
