@@ -7,6 +7,8 @@ monitoring model behaviour through an interactive dashboard.
 > **Research notice:** This project uses synthetic PaySim data. It is an experimental
 > prototype, not a live banking system, and it is not connected to real financial APIs.
 
+[![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/San-Yamin/AI_Fraud_Adversarial/blob/main/notebooks/fraud_adversarial_colab.ipynb)
+
 ## What this project demonstrates
 
 The project follows one reproducible workflow:
