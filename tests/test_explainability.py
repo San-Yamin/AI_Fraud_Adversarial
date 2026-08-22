@@ -4,7 +4,10 @@ import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 
+from src import config
 from src.explainability import (
+    SHAP_MAX_FRAUD_SAMPLES,
+    SHAP_MAX_SAMPLES,
     build_interpretation,
     compute_shap_values,
     create_tree_explainer,
@@ -27,6 +30,14 @@ class FixedModel:
 class FakeExplanation:
     feature_names = ["amount", "type_TRANSFER"]
     values = np.array([[2.0, -1.0], [4.0, 1.0]])
+
+
+def test_shap_sampling_config_names_are_aligned():
+    assert config.SHAP_MAX_SAMPLES == SHAP_MAX_SAMPLES
+    assert config.SHAP_MAX_FRAUD_SAMPLES == SHAP_MAX_FRAUD_SAMPLES
+    assert config.SHAP_MAX_SAMPLES > 0
+    assert 0 <= config.SHAP_MAX_FRAUD_SAMPLES <= config.SHAP_MAX_SAMPLES
+    assert config.SHAP_MAX_DISPLAY > 0
 
 
 def test_shap_sample_is_bounded_reproducible_and_test_only():

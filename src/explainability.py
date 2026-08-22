@@ -12,7 +12,14 @@ import numpy as np
 import pandas as pd
 import shap
 
-from src.config import RANDOM_SEED, SHAP_MAX_FRAUD_SAMPLES, SHAP_MAX_SAMPLES
+from src import config
+
+# Keep Phase 2 compatible with a Colab checkout that still has the completed
+# Phase 1 config. New constants remain configurable when the updated config is
+# present, while safe memory-aware defaults prevent an import-time failure.
+RANDOM_SEED = config.RANDOM_SEED
+SHAP_MAX_SAMPLES = getattr(config, "SHAP_MAX_SAMPLES", 1000)
+SHAP_MAX_FRAUD_SAMPLES = getattr(config, "SHAP_MAX_FRAUD_SAMPLES", 250)
 
 
 def load_phase1_artifacts(
