@@ -45,10 +45,79 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    .prototype-notice {padding: .8rem 1rem; border-radius: .5rem;
-        background: #fff3cd; color: #664d03; font-weight: 650; margin-bottom: 1rem;}
-    .workflow {padding: 1rem; border-radius: .6rem; background: #f2f6fc;
-        text-align: center; font-size: 1.05rem; font-weight: 600;}
+    :root {
+        --canvas: #F7F8FA; --surface: #FFFFFF; --text: #1F2937;
+        --muted: #6B7280; --primary: #1D4ED8; --success: #059669;
+        --warning: #D97706; --danger: #DC2626; --border: #E5E7EB;
+    }
+    .stApp {background: var(--canvas); color: var(--text);}
+    .block-container {max-width: 1280px; padding-top: 2rem; padding-bottom: 3rem;}
+    h1, h2, h3 {color: var(--text); letter-spacing: -0.025em;}
+    p, .stCaption {color: var(--muted);}
+    [data-testid="stSidebar"] {background: #FFFFFF; border-right: 1px solid var(--border);}
+    [data-testid="stSidebar"] .block-container {padding: 1.5rem 1.1rem;}
+    [data-testid="stSidebar"] [role="radiogroup"] {gap: .25rem;}
+    [data-testid="stSidebar"] label[data-baseweb="radio"] {
+        padding: .5rem .65rem; border-radius: .45rem; transition: background .15s ease;
+    }
+    [data-testid="stSidebar"] label[data-baseweb="radio"]:hover {background: #F3F4F6;}
+    .brand {display:flex; align-items:center; gap:.75rem; margin:.15rem 0 1.35rem;}
+    .brand-mark {width:2.25rem; height:2.25rem; border-radius:.55rem; background:#1D4ED8;
+        color:white; display:flex; align-items:center; justify-content:center;
+        font-weight:750; letter-spacing:-.04em;}
+    .brand-name {font-size:1rem; font-weight:750; color:var(--text); line-height:1.15;}
+    .brand-meta {font-size:.72rem; color:var(--muted); margin-top:.15rem;}
+    .dashboard-header {padding:.1rem 0 1.15rem; border-bottom:1px solid var(--border); margin-bottom:1rem;}
+    .dashboard-eyebrow {font-size:.72rem; text-transform:uppercase; letter-spacing:.11em;
+        color:var(--primary); font-weight:750; margin-bottom:.35rem;}
+    .dashboard-title {font-size:1.78rem; line-height:1.2; font-weight:760;
+        color:var(--text); letter-spacing:-.035em; margin:0;}
+    .dashboard-subtitle {font-size:.92rem; color:var(--muted); margin-top:.42rem; max-width:760px;}
+    .page-header {margin:1.7rem 0 1.15rem;}
+    .page-kicker {font-size:.7rem; text-transform:uppercase; letter-spacing:.1em;
+        color:var(--primary); font-weight:750; margin-bottom:.3rem;}
+    .page-title {font-size:1.45rem; font-weight:750; color:var(--text);
+        letter-spacing:-.025em; margin:0;}
+    .page-description {font-size:.91rem; color:var(--muted); margin-top:.38rem; max-width:800px;}
+    .prototype-notice {padding:.75rem .95rem; border:1px solid #F3D7A1;
+        border-left:4px solid var(--warning); border-radius:.5rem;
+        background:#FFFBEB; color:#78350F; font-size:.86rem; font-weight:600; margin-bottom:1rem;}
+    .workflow {display:flex; flex-wrap:wrap; gap:.45rem; align-items:center;
+        padding:1rem; border:1px solid var(--border); border-radius:.65rem; background:white;}
+    .workflow-step {padding:.46rem .7rem; border-radius:.4rem; background:#EFF6FF;
+        color:#1E3A8A; font-size:.82rem; font-weight:650;}
+    .workflow-arrow {color:#9CA3AF; font-size:.8rem;}
+    .info-grid {display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.8rem; margin:.8rem 0 1rem;}
+    .info-card {background:white; border:1px solid var(--border); border-radius:.65rem; padding:1rem;}
+    .info-label {font-size:.7rem; text-transform:uppercase; letter-spacing:.08em;
+        color:var(--muted); font-weight:700;}
+    .info-value {font-size:.95rem; color:var(--text); font-weight:650; margin-top:.35rem;}
+    [data-testid="stMetric"] {background:#FFFFFF; border:1px solid var(--border);
+        border-radius:.65rem; padding:.85rem 1rem; box-shadow:0 1px 2px rgba(15,23,42,.035);}
+    [data-testid="stMetricLabel"] {color:var(--muted); font-size:.78rem;}
+    [data-testid="stMetricValue"] {color:var(--text); font-size:1.42rem; font-weight:730;}
+    [data-testid="stVerticalBlockBorderWrapper"] {background:#FFFFFF;
+        border-color:var(--border) !important; border-radius:.7rem !important;
+        box-shadow:0 1px 2px rgba(15,23,42,.03);}
+    [data-testid="stForm"] {background:#FFFFFF; border:1px solid var(--border);
+        border-radius:.7rem; padding:1.15rem;}
+    [data-testid="stDataFrame"] {border:1px solid var(--border); border-radius:.55rem; overflow:hidden;}
+    .stTabs [data-baseweb="tab-list"] {gap:1.2rem; border-bottom:1px solid var(--border);}
+    .stTabs [data-baseweb="tab"] {height:2.8rem; padding:0 .15rem; color:var(--muted);}
+    .stTabs [aria-selected="true"] {color:var(--primary); font-weight:650;}
+    .stButton > button, .stDownloadButton > button {border-radius:.48rem; font-weight:650;
+        min-height:2.5rem; border-color:#D1D5DB;}
+    .stButton > button[kind="primary"] {background:var(--primary); border-color:var(--primary);}
+    div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
+        border-color:#D1D5DB; border-radius:.45rem; background:#FFFFFF;
+    }
+    [data-testid="stAlert"] {border-radius:.55rem; border:1px solid var(--border);}
+    hr {border-color:var(--border); margin:2rem 0 1rem;}
+    @media (max-width: 800px) {
+        .block-container {padding:1rem .8rem 2rem;}
+        .dashboard-title {font-size:1.45rem;}
+        .info-grid {grid-template-columns:1fr;}
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -63,11 +132,22 @@ def show_notice() -> None:
     )
 
 
+def page_header(title: str, description: str, kicker: str = "Research dashboard") -> None:
+    st.markdown(
+        f'<div class="page-header"><div class="page-kicker">{kicker}</div>'
+        f'<div class="page-title">{title}</div>'
+        f'<div class="page-description">{description}</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def show_image(path: Path, caption: str) -> None:
-    if path.is_file():
-        st.image(str(path), caption=caption, use_container_width=True)
-    else:
-        st.warning(f"Figure unavailable: `{path}`")
+    with st.container(border=True):
+        st.markdown(f"**{caption}**")
+        if path.is_file():
+            st.image(str(path), use_container_width=True)
+        else:
+            st.warning(f"Figure unavailable: `{path}`")
 
 
 def metric_cards(metrics: dict) -> None:
@@ -118,10 +198,14 @@ def cached_concept_drift(dataset_path: str, output_path: str, n_windows: int):
 
 default_outputs = default_output_directory(PROJECT_ROOT)
 with st.sidebar:
-    st.title("Fraud Security Lab")
-    output_input = st.text_input("Saved outputs directory", str(default_outputs))
+    st.markdown(
+        '<div class="brand"><div class="brand-mark">FS</div><div>'
+        '<div class="brand-name">Fraud Security Lab</div>'
+        '<div class="brand-meta">Adversarial robustness research</div></div></div>',
+        unsafe_allow_html=True,
+    )
     page = st.radio(
-        "Dashboard section",
+        "Navigation",
         (
             "Project Overview",
             "Baseline Performance",
@@ -132,38 +216,57 @@ with st.sidebar:
             "Real-Time Simulation",
             "Concept Drift",
         ),
+        label_visibility="collapsed",
     )
+    with st.expander("Artifact settings"):
+        output_input = st.text_input("Saved outputs directory", str(default_outputs))
     st.caption("The dashboard reads saved artifacts only. It does not retrain models.")
 
 paths = artifact_paths(Path(output_input).expanduser())
 
-st.title("AI-Based Fraud Detection and Adversarial Robustness")
+st.markdown(
+    '<div class="dashboard-header"><div class="dashboard-eyebrow">CST-8415 · Security research</div>'
+    '<h1 class="dashboard-title">AI-Based Fraud Detection &amp; Adversarial Robustness</h1>'
+    '<div class="dashboard-subtitle">An evidence-led view of model performance, explainability, '
+    'adversarial exposure, hardening, simulation, and temporal stability.</div></div>',
+    unsafe_allow_html=True,
+)
 show_notice()
 
 if page == "Project Overview":
-    st.header("Project Overview")
-    st.write(
-        "A security-focused machine-learning prototype that detects fraudulent digital "
-        "banking transactions, explains model decisions, evaluates constrained adversarial "
-        "evasion, compares attacks, and measures adversarial hardening."
-    )
-    st.info(
-        "PaySim is a synthetic mobile-money transaction dataset. No real customer or "
-        "banking data is used."
+    page_header(
+        "Project Overview",
+        "A security-focused machine-learning prototype for detecting fraud, explaining "
+        "decisions, evaluating adversarial evasion, and measuring defensive hardening.",
+        "System summary",
     )
     st.markdown(
-        '<div class="workflow">Fraud Detection &nbsp;→&nbsp; SHAP &nbsp;→&nbsp; '
-        "Adversarial Attack &nbsp;→&nbsp; Multiple Attack Comparison &nbsp;→&nbsp; Hardening</div>",
+        '<div class="info-grid">'
+        '<div class="info-card"><div class="info-label">Dataset</div>'
+        '<div class="info-value">Synthetic PaySim transactions</div></div>'
+        '<div class="info-card"><div class="info-label">Model family</div>'
+        '<div class="info-value">XGBoost fraud detection</div></div>'
+        '<div class="info-card"><div class="info-label">Operating mode</div>'
+        '<div class="info-value">Offline research prototype</div></div></div>',
         unsafe_allow_html=True,
     )
-    st.subheader("Completed experiment stages")
-    st.write(
-        "Baseline XGBoost detection · Tree SHAP explainability · constrained ART attacks · "
-        "multi-attack comparison · leakage-safe adversarial training"
+    st.markdown(
+        '<div class="workflow"><span class="workflow-step">Fraud Detection</span>'
+        '<span class="workflow-arrow">→</span><span class="workflow-step">SHAP</span>'
+        '<span class="workflow-arrow">→</span><span class="workflow-step">Adversarial Attack</span>'
+        '<span class="workflow-arrow">→</span><span class="workflow-step">Attack Comparison</span>'
+        '<span class="workflow-arrow">→</span><span class="workflow-step">Hardening</span></div>',
+        unsafe_allow_html=True,
     )
+    with st.container(border=True):
+        st.markdown("**Completed experiment stages**")
+        st.caption(
+            "Baseline XGBoost detection · Tree SHAP explainability · constrained ART attacks · "
+            "multi-attack comparison · leakage-safe adversarial training"
+        )
 
 elif page == "Baseline Performance":
-    st.header("Baseline Model Performance")
+    page_header("Baseline Model Performance", "Saved clean-test metrics from the original XGBoost detector.", "Phase 1")
     try:
         payload = load_json(paths["phase1_metrics"])
         metric_cards(payload.get("metrics", {}))
@@ -186,8 +289,8 @@ elif page == "Baseline Performance":
         show_image(paths["phase1_pr_curve"], "Baseline precision–recall curve")
 
 elif page == "SHAP Explainability":
-    st.header("SHAP Explainability")
-    st.caption("These are saved Tree SHAP results from the baseline model; SHAP is not recomputed here.")
+    page_header("SHAP Explainability", "Global and local Tree SHAP evidence from the saved baseline model.", "Phase 2")
+    st.caption("SHAP is not recomputed in the dashboard; all plots are saved experiment outputs.")
     tabs = st.tabs(["Global importance", "Beeswarm", "Fraud example", "Legitimate example"])
     with tabs[0]:
         show_image(paths["shap_importance_plot"], "Global SHAP feature importance")
@@ -203,7 +306,7 @@ elif page == "SHAP Explainability":
         show_image(paths["shap_legitimate_waterfall"], "Correctly detected legitimate transaction")
 
 elif page == "Attack Comparison":
-    st.header("Multiple Attack Comparison")
+    page_header("Multiple Attack Comparison", "A consistent comparison of constrained adversarial evasion attacks.", "Phase 4")
     try:
         comparison = load_csv(paths["phase4_csv"])
         st.dataframe(comparison, use_container_width=True, hide_index=True)
@@ -222,7 +325,7 @@ elif page == "Attack Comparison":
     st.caption("Adversarial test transactions were evaluation-only and were never used for training.")
 
 elif page == "Baseline vs Hardened":
-    st.header("Baseline vs Hardened Model")
+    page_header("Baseline vs Hardened Model", "Clean performance and fresh-attack robustness after leakage-safe adversarial training.", "Phase 5")
     try:
         hardened_payload = load_json(paths["phase5_metrics"])
         hardened_clean = hardened_payload.get("hardened_clean_evaluation", {}).get(
@@ -257,21 +360,25 @@ elif page == "Baseline vs Hardened":
                 show_image(paths[key], caption)
 
 elif page == "Single Transaction":
-    st.header("Single Transaction Prediction")
-    st.write("Enter PaySim-style values. The saved Phase 1 preprocessor is applied to both models.")
+    page_header("Single Transaction Prediction", "Evaluate one PaySim-style transaction with the saved baseline and hardened models.", "Interactive analysis")
+    st.caption("The same saved Phase 1 preprocessor and encoded feature order are applied to both models.")
     try:
         baseline_model, hardened_model, preprocessor, feature_names = cached_prediction_artifacts(
             str(Path(output_input).expanduser())
         )
         transaction_types = available_transaction_types(preprocessor)
         with st.form("transaction_form"):
+            st.markdown("**Transaction details**")
+            st.caption("Enter valid non-negative PaySim values for the transaction snapshot.")
             left, right = st.columns(2)
             with left:
+                st.markdown("##### Transaction & sender")
                 transaction_type = st.selectbox("Transaction type", transaction_types)
                 step = st.number_input("Step", min_value=1, value=1, step=1)
                 amount = st.number_input("Amount", min_value=0.0, value=1000.0, step=100.0)
                 oldbalance_org = st.number_input("Sender old balance", min_value=0.0, value=5000.0)
             with right:
+                st.markdown("##### Resulting balances")
                 newbalance_orig = st.number_input("Sender new balance", min_value=0.0, value=4000.0)
                 oldbalance_dest = st.number_input("Receiver old balance", min_value=0.0, value=0.0)
                 newbalance_dest = st.number_input("Receiver new balance", min_value=0.0, value=1000.0)
@@ -288,17 +395,18 @@ elif page == "Single Transaction":
             for column, model_name in zip(st.columns(2), ("Baseline", "Hardened")):
                 result = predictions[model_name]
                 with column:
-                    st.subheader(model_name)
-                    st.metric("Prediction", result["prediction_label"])
-                    st.metric("Fraud probability", f"{result['fraud_probability']:.2%}")
-                    st.metric("Risk band", result["risk_label"])
+                    with st.container(border=True):
+                        st.markdown(f"### {model_name} model")
+                        st.metric("Prediction", result["prediction_label"])
+                        st.metric("Fraud probability", f"{result['fraud_probability']:.2%}")
+                        st.metric("Risk band", result["risk_label"])
             st.caption("Low/Medium/High is a presentation band derived from probability, not a separately trained model.")
     except (FileNotFoundError, ValueError, TypeError, KeyError, AttributeError) as error:
         st.error(str(error))
         st.info("Set the sidebar path to the outputs directory containing both models and preprocessing artifacts.")
 
 elif page == "Real-Time Simulation":
-    st.header("Real-Time Transaction Simulation")
+    page_header("Real-Time Transaction Simulation", "Replay a small PaySim sequence through the hardened model and monitor running outcomes.", "Phase 7")
     st.warning(
         "Simulated transaction stream using synthetic PaySim data. "
         "Not connected to any live banking system."
@@ -311,6 +419,7 @@ elif page == "Real-Time Simulation":
     dataset_input = st.text_input(
         "PaySim CSV path", str(default_dataset_path(PROJECT_ROOT)), key="simulation_dataset"
     )
+    st.markdown("#### Simulation controls")
     control_columns = st.columns(4)
     with control_columns[0]:
         transaction_count = st.number_input(
@@ -466,7 +575,7 @@ elif page == "Real-Time Simulation":
         st.info("Check the PaySim path and the saved hardened-model artifact directory.")
 
 else:
-    st.header("Concept Drift")
+    page_header("Concept Drift", "Evaluate hardened-model performance and feature stability across chronological PaySim windows.", "Phase 8")
     st.warning(
         "Concept drift analysis is simulated using PaySim step-based chronological windows."
     )
@@ -477,6 +586,7 @@ else:
     drift_dataset = st.text_input(
         "PaySim CSV path", str(default_dataset_path(PROJECT_ROOT)), key="drift_dataset"
     )
+    st.markdown("#### Analysis configuration")
     n_windows = st.slider("Chronological windows", min_value=8, max_value=12, value=8)
     run_drift = st.button("Run concept drift analysis", type="primary")
     refresh_drift = st.button("Clear cached analysis and rerun")
