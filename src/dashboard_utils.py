@@ -1,1 +1,178 @@
-"""Dashboard support utilities will be implemented in Phase 6."""
+"""Reusable artifact loading and single-transaction inference for Phase 6."""
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+from typing import Any, Mapping
+
+import joblib
+import numpy as np
+import pandas as pd
+
+
+PAYMENT_TYPES = ("CASH_IN", "CASH_OUT", "DEBIT", "PAYMENT", "TRANSFER")
+MODEL_INPUT_COLUMNS = (
+    "step",
+    "type",
+    "amount",
+    "oldbalanceOrg",
+    "newbalanceOrig",
+    "oldbalanceDest",
+    "newbalanceDest",
+)
+
+
+def default_output_directory(project_root: str | Path) -> Path:
+    """Prefer an explicit path, then mounted Drive, then repository outputs."""
+    root = Path(project_root)
+    candidates = []
+    if os.getenv("OUTPUT_DIR"):
+        candidates.append(Path(os.environ["OUTPUT_DIR"]))
+    candidates.extend(
+        [
+            Path("/content/drive/MyDrive/AI_Fraud_Adversarial/outputs"),
+            root / "outputs",
+        ]
+    )
+    return next((path for path in candidates if path.exists()), candidates[-1])
+
+
+def artifact_paths(output_dir: str | Path) -> dict[str, Path]:
+    """Return the complete Phase 1–5 dashboard artifact contract."""
+    output = Path(output_dir)
+    return {
+        "baseline_model": output / "models" / "baseline_model.joblib",
+        "hardened_model": output / "models" / "hardened_model.joblib",
+        "preprocessor": output / "models" / "baseline_preprocessor.joblib",
+        "feature_names": output / "models" / "feature_names.joblib",
+        "phase1_metrics": output / "metrics" / "phase1_baseline_metrics.json",
+        "phase4_csv": output / "metrics" / "phase4_attack_comparison.csv",
+        "phase4_json": output / "metrics" / "phase4_attack_comparison.json",
+        "phase5_metrics": output / "metrics" / "phase5_hardened_metrics.json",
+        "phase5_csv": output / "metrics" / "phase5_hardening_comparison.csv",
+        "phase1_confusion": output / "figures" / "phase1" / "baseline_confusion_matrix.png",
+        "phase1_pr_curve": output / "figures" / "phase1" / "baseline_precision_recall_curve.png",
+        "shap_importance_plot": output / "shap" / "global_feature_importance_bar.png",
+        "shap_beeswarm": output / "shap" / "global_summary_beeswarm.png",
+        "shap_fraud_waterfall": output / "shap" / "correct_fraud_waterfall.png",
+        "shap_legitimate_waterfall": output / "shap" / "correct_legitimate_waterfall.png",
+        "shap_importance_csv": output / "shap" / "global_feature_importance.csv",
+        "phase4_success": output / "figures" / "phase4" / "attack_success_rate_comparison.png",
+        "phase4_recall": output / "figures" / "phase4" / "recall_under_attack_comparison.png",
+        "phase4_perturbation": output / "figures" / "phase4" / "perturbation_size_comparison.png",
+        "phase4_runtime": output / "figures" / "phase4" / "runtime_comparison.png",
+        "phase5_clean_recall": output / "figures" / "phase5" / "clean_recall_comparison.png",
+        "phase5_attack_recall": output / "figures" / "phase5" / "recall_under_attack_comparison.png",
+        "phase5_attack_success": output / "figures" / "phase5" / "attack_success_comparison.png",
+        "phase5_confusion": output / "figures" / "phase5" / "hardened_confusion_matrix.png",
+    }
+
+
+def load_json(path: str | Path) -> dict[str, Any]:
+    """Load a JSON object, raising a useful artifact-specific error."""
+    source = Path(path)
+    if not source.is_file():
+        raise FileNotFoundError(f"Required artifact is missing: {source}")
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"Expected a JSON object in {source}")
+    return payload
+
+
+def load_csv(path: str | Path) -> pd.DataFrame:
+    source = Path(path)
+    if not source.is_file():
+        raise FileNotFoundError(f"Required artifact is missing: {source}")
+    return pd.read_csv(source)
+
+
+def load_prediction_artifacts(paths: Mapping[str, Path]) -> tuple[Any, Any, Any, list[str]]:
+    """Load both immutable model variants and their shared preprocessing artifacts."""
+    required = ("baseline_model", "hardened_model", "preprocessor", "feature_names")
+    missing = [str(paths[name]) for name in required if not paths[name].is_file()]
+    if missing:
+        raise FileNotFoundError("Missing prediction artifacts: " + ", ".join(missing))
+    baseline = joblib.load(paths["baseline_model"])
+    hardened = joblib.load(paths["hardened_model"])
+    preprocessor = joblib.load(paths["preprocessor"])
+    names = list(joblib.load(paths["feature_names"]))
+    for label, model in (("baseline", baseline), ("hardened", hardened)):
+        if not callable(getattr(model, "predict_proba", None)):
+            raise TypeError(f"The {label} model does not implement predict_proba()")
+    return baseline, hardened, preprocessor, names
+
+
+def available_transaction_types(preprocessor: Any) -> list[str]:
+    """Read fitted one-hot categories, with PaySim values as a safe UI fallback."""
+    try:
+        encoder = preprocessor.named_transformers_["transaction_type"]
+        values = [str(value) for value in encoder.categories_[0]]
+        return values or list(PAYMENT_TYPES)
+    except (AttributeError, KeyError, IndexError, TypeError):
+        return list(PAYMENT_TYPES)
+
+
+def build_raw_transaction(values: Mapping[str, Any]) -> pd.DataFrame:
+    """Validate and engineer exactly the raw features used in Phase 1."""
+    missing = sorted(set(MODEL_INPUT_COLUMNS) - set(values))
+    if missing:
+        raise ValueError(f"Missing transaction fields: {missing}")
+    row = {name: values[name] for name in MODEL_INPUT_COLUMNS}
+    if int(row["step"]) < 1:
+        raise ValueError("step must be at least 1")
+    monetary = MODEL_INPUT_COLUMNS[2:]
+    if any(float(row[name]) < 0 for name in monetary):
+        raise ValueError("Transaction amounts and balances cannot be negative")
+    frame = pd.DataFrame([row])
+    frame["sender_balance_change"] = frame["oldbalanceOrg"] - frame["newbalanceOrig"]
+    frame["receiver_balance_change"] = frame["newbalanceDest"] - frame["oldbalanceDest"]
+    sender = frame["oldbalanceOrg"].to_numpy(dtype=np.float32)
+    amount = frame["amount"].to_numpy(dtype=np.float32)
+    frame["amount_to_sender_balance"] = np.divide(
+        amount, sender, out=np.zeros_like(amount), where=sender != 0
+    )
+    return frame
+
+
+def transform_transaction(
+    values: Mapping[str, Any], preprocessor: Any, feature_names: list[str]
+) -> pd.DataFrame:
+    """Apply the saved fitted preprocessor and enforce saved column order."""
+    raw = build_raw_transaction(values)
+    transformed = preprocessor.transform(raw)
+    encoded = pd.DataFrame(transformed, columns=preprocessor.get_feature_names_out())
+    missing = sorted(set(feature_names) - set(encoded.columns))
+    extra = sorted(set(encoded.columns) - set(feature_names))
+    if missing or extra:
+        raise ValueError(f"Saved feature mismatch; missing={missing}, extra={extra}")
+    return encoded.loc[:, feature_names].astype("float32")
+
+
+def risk_label(probability: float) -> str:
+    """Return a presentation-only probability band, not a model class."""
+    if probability < 0.30:
+        return "Low"
+    if probability < 0.70:
+        return "Medium"
+    return "High"
+
+
+def predict_transaction(
+    values: Mapping[str, Any], baseline: Any, hardened: Any,
+    preprocessor: Any, feature_names: list[str],
+) -> dict[str, dict[str, Any]]:
+    """Return actual predictions from both saved models without retraining."""
+    encoded = transform_transaction(values, preprocessor, feature_names)
+    results = {}
+    for label, model in (("Baseline", baseline), ("Hardened", hardened)):
+        probability = float(model.predict_proba(encoded)[0, 1])
+        prediction = int(model.predict(encoded)[0])
+        results[label] = {
+            "prediction": prediction,
+            "prediction_label": "Fraud" if prediction == 1 else "Legitimate",
+            "fraud_probability": probability,
+            "risk_label": risk_label(probability),
+        }
+    return results

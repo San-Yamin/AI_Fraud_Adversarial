@@ -106,3 +106,27 @@ Include the Phase 4 comparison tests with:
 ```bash
 python -m pytest tests/test_smoke.py tests/test_data_leakage.py tests/test_phase1.py tests/test_explainability.py tests/test_attack.py tests/test_attack_comparison.py -q
 ```
+
+## Phase 6 dashboard
+
+The Streamlit dashboard reads saved Phase 1–5 artifacts only. It does not retrain a
+model or load the PaySim CSV. When artifacts are outside the repository's `outputs/`
+directory, set `OUTPUT_DIR` or change the path in the dashboard sidebar.
+
+Local run:
+
+```bash
+python -m pip install -r requirements-colab.txt
+OUTPUT_DIR=/path/to/AI_Fraud_Adversarial/outputs streamlit run app.py
+```
+
+For a Colab presentation, mount Drive, change into the cloned repository, and run:
+
+```python
+%env OUTPUT_DIR=/content/drive/MyDrive/AI_Fraud_Adversarial/outputs
+!streamlit run app.py --server.port 8501 &>/content/streamlit.log &
+from google.colab import output
+output.serve_kernel_port_as_window(8501)
+```
+
+The Real-Time Simulation page is a Phase 7 placeholder and does not process transactions.
