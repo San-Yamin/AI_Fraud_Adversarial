@@ -1,0 +1,27 @@
+# PaySim and downloaded dataset archives
+data/*.csv
+data/*.CSV
+data/*.zip
+data/*.ZIP
+*paysim*.csv
+*PaySim*.csv
+
+# Python and test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Notebook and local environment files
+.ipynb_checkpoints/
+.DS_Store
+.env
+.venv/
+venv/
+
+# Generated model artifacts (often large)
+outputs/models/*
+!outputs/models/.gitkeep
+*.joblib
+*.pkl
+*.pickle
+*.xgb
