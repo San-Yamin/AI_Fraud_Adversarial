@@ -65,3 +65,41 @@ def plot_precision_recall(result: dict[str, Any], output_dir: str | Path) -> Any
     )
     _save(fig, Path(output_dir) / "baseline_precision_recall_curve.png")
     return fig
+
+
+def plot_attack_probabilities(samples: pd.DataFrame, output_dir: str | Path) -> Any:
+    """Compare clean and adversarial fraud probabilities per attacked sample."""
+    frame = samples.reset_index(drop=True)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(frame.index, frame["clean_fraud_probability"], marker="o", label="Clean")
+    ax.plot(
+        frame.index,
+        frame["adversarial_fraud_probability"],
+        marker="x",
+        label="Adversarial",
+    )
+    ax.axhline(0.5, color="black", linestyle="--", linewidth=1, label="Decision threshold")
+    ax.set(
+        title="Fraud Probability Before and After Targeted HopSkipJump",
+        xlabel="Attacked test-fraud sample",
+        ylabel="Fraud probability",
+        ylim=(0, 1.02),
+    )
+    ax.legend()
+    _save(fig, Path(output_dir) / "attack_fraud_probabilities.png")
+    return fig
+
+
+def plot_attack_perturbations(samples: pd.DataFrame, output_dir: str | Path) -> Any:
+    """Show encoded-space L2 perturbation sizes and successful evasions."""
+    frame = samples.reset_index(drop=True)
+    colors = frame["successful_evasion"].map({True: "tab:red", False: "tab:blue"})
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.bar(frame.index, frame["l2_perturbation"], color=colors)
+    ax.set(
+        title="Constrained Adversarial Perturbation Size",
+        xlabel="Attacked test-fraud sample",
+        ylabel="Encoded-space L2 distance",
+    )
+    _save(fig, Path(output_dir) / "attack_perturbation_sizes.png")
+    return fig

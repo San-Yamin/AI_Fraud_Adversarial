@@ -53,3 +53,14 @@ SHAP_MAX_FRAUD_SAMPLES = int(os.getenv("SHAP_MAX_FRAUD_SAMPLES", "250"))
 SHAP_MAX_DISPLAY = int(os.getenv("SHAP_MAX_DISPLAY", "15"))
 SHAP_IMPORTANCE_PATH = SHAP_DIR / "global_feature_importance.csv"
 SHAP_INTERPRETATION_PATH = SHAP_DIR / "phase2_interpretation.json"
+
+# Phase 3: bounded, test-only targeted HopSkipJump defaults for free Colab.
+ATTACK_SAMPLE_SIZE = int(os.getenv("ATTACK_SAMPLE_SIZE", "20"))
+ATTACK_RELATIVE_BOUND = float(os.getenv("ATTACK_RELATIVE_BOUND", "0.10"))
+ATTACK_MAX_ITER = int(os.getenv("ATTACK_MAX_ITER", "10"))
+ATTACK_MAX_EVAL = int(os.getenv("ATTACK_MAX_EVAL", "500"))
+ATTACK_INIT_EVAL = int(os.getenv("ATTACK_INIT_EVAL", "50"))
+ATTACK_INIT_SIZE = int(os.getenv("ATTACK_INIT_SIZE", "30"))
+PHASE3_FIGURES_DIR = FIGURES_DIR / "phase3"
+PHASE3_METRICS_PATH = METRICS_DIR / "phase3_attack_metrics.json"
+PHASE3_SAMPLES_PATH = METRICS_DIR / "phase3_attacked_samples.csv"
