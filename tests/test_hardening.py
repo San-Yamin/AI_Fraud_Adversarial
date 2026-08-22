@@ -100,3 +100,13 @@ def test_notebook_contains_only_phase5_cells_38_through_46():
         assert any(f"Cell {number} —" in text for text in markdown)
     phase6 = next(text for text in markdown if text.startswith("# PHASE 6"))
     assert "Not implemented." in phase6
+
+    cell38 = next(
+        "".join(cell.get("source", []))
+        for cell in notebook["cells"]
+        if cell["cell_type"] == "code"
+        and "phase5_attack_parameters" in "".join(cell.get("source", []))
+    )
+    assert "getattr(" in cell38
+    assert "project_config.HARDENING_TRAIN_ATTACK_SAMPLE_SIZE" not in cell38
+    assert "project_config.HARDENING_TEST_ATTACK_SAMPLE_SIZE" not in cell38
