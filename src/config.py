@@ -64,3 +64,17 @@ ATTACK_INIT_SIZE = int(os.getenv("ATTACK_INIT_SIZE", "30"))
 PHASE3_FIGURES_DIR = FIGURES_DIR / "phase3"
 PHASE3_METRICS_PATH = METRICS_DIR / "phase3_attack_metrics.json"
 PHASE3_SAMPLES_PATH = METRICS_DIR / "phase3_attacked_samples.csv"
+
+# Phase 4 uses the same population/bounds with practical attack-specific budgets.
+PHASE4_ATTACK_SAMPLE_SIZE = int(
+    os.getenv("PHASE4_ATTACK_SAMPLE_SIZE", str(ATTACK_SAMPLE_SIZE))
+)
+BOUNDARY_MAX_ITER = int(os.getenv("BOUNDARY_MAX_ITER", "50"))
+BOUNDARY_NUM_TRIAL = int(os.getenv("BOUNDARY_NUM_TRIAL", "10"))
+BOUNDARY_SAMPLE_SIZE = int(os.getenv("BOUNDARY_SAMPLE_SIZE", "10"))
+ZOO_MAX_ITER = int(os.getenv("ZOO_MAX_ITER", "20"))
+ZOO_LEARNING_RATE = float(os.getenv("ZOO_LEARNING_RATE", "0.05"))
+ZOO_NB_PARALLEL = int(os.getenv("ZOO_NB_PARALLEL", "5"))
+PHASE4_FIGURES_DIR = FIGURES_DIR / "phase4"
+PHASE4_COMPARISON_CSV_PATH = METRICS_DIR / "phase4_attack_comparison.csv"
+PHASE4_COMPARISON_JSON_PATH = METRICS_DIR / "phase4_attack_comparison.json"

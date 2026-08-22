@@ -8,7 +8,7 @@ from typing import Any
 import art
 import numpy as np
 import pandas as pd
-from art.attacks.evasion import HopSkipJump
+from art.attacks.evasion import BoundaryAttack, HopSkipJump, ZooAttack
 from art.estimators.classification import BlackBoxClassifier
 
 from src.config import (
@@ -368,3 +368,164 @@ def validate_adversarial_constraints(
         X_adversarial["amount_to_sender_balance"], expected_ratio, atol=tolerance
     ):
         raise ValueError("Amount-to-sender dependency is inconsistent")
+
+
+def verify_comparison_attacks() -> pd.DataFrame:
+    """Report actual ART requirements for the three Phase 4 attacks."""
+    rows = []
+    details = {
+        "HopSkipJump": (
+            HopSkipJump,
+            "decision-based",
+            "Uses predicted class decisions; no gradients required",
+        ),
+        "BoundaryAttack": (
+            BoundaryAttack,
+            "decision-based",
+            "Uses predicted class decisions; no gradients required",
+        ),
+        "ZooAttack": (
+            ZooAttack,
+            "score-based finite-difference",
+            "Uses class scores from predict_proba; no model gradients required",
+        ),
+    }
+    for name, (attack_class, attack_type, reason) in details.items():
+        requirements = [item.__name__ for item in attack_class._estimator_requirements]
+        rows.append(
+            {
+                "attack": name,
+                "art_version": art.__version__,
+                "attack_type": attack_type,
+                "estimator": "BlackBoxClassifier",
+                "estimator_requirements": ", ".join(requirements),
+                "gradient_required": False,
+                "compatible": requirements == ["BaseEstimator", "ClassifierMixin"],
+                "compatibility_reason": reason,
+            }
+        )
+    result = pd.DataFrame(rows)
+    if not result["compatible"].all():
+        raise RuntimeError("One or more selected ART attacks is incompatible")
+    return result
+
+
+def _build_comparison_attack(
+    attack_name: str,
+    estimator: BlackBoxClassifier,
+    parameters: dict[str, Any],
+    *,
+    verbose: bool,
+) -> Any:
+    """Instantiate one verified Phase 4 ART attack."""
+    if attack_name == "HopSkipJump":
+        return HopSkipJump(
+            classifier=estimator,
+            targeted=True,
+            norm=2,
+            max_iter=int(parameters["max_iter"]),
+            max_eval=int(parameters["max_eval"]),
+            init_eval=int(parameters["init_eval"]),
+            init_size=int(parameters["init_size"]),
+            batch_size=64,
+            verbose=verbose,
+        )
+    if attack_name == "BoundaryAttack":
+        return BoundaryAttack(
+            estimator=estimator,
+            targeted=True,
+            max_iter=int(parameters["max_iter"]),
+            num_trial=int(parameters["num_trial"]),
+            sample_size=int(parameters["sample_size"]),
+            init_size=int(parameters["init_size"]),
+            batch_size=64,
+            verbose=verbose,
+        )
+    if attack_name == "ZooAttack":
+        return ZooAttack(
+            classifier=estimator,
+            targeted=True,
+            learning_rate=float(parameters["learning_rate"]),
+            max_iter=int(parameters["max_iter"]),
+            binary_search_steps=1,
+            initial_const=0.001,
+            abort_early=True,
+            use_resize=False,
+            use_importance=False,
+            nb_parallel=int(parameters["nb_parallel"]),
+            batch_size=1,
+            verbose=verbose,
+        )
+    raise ValueError(f"Unsupported comparison attack: {attack_name}")
+
+
+def generate_constrained_comparison_attack(
+    attack_name: str,
+    model: Any,
+    X_attack: pd.DataFrame,
+    parameters: dict[str, Any],
+    *,
+    relative_bound: float = ATTACK_RELATIVE_BOUND,
+    random_state: int = RANDOM_SEED,
+    verbose: bool = False,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Run one ART attack in the identical Phase 3 constrained latent space."""
+    compatibility = verify_art_compatibility(model, X_attack.columns.tolist())
+    selected = verify_comparison_attacks().set_index("attack")
+    if attack_name not in selected.index:
+        raise ValueError(f"Attack is not in the verified comparison set: {attack_name}")
+    adversarial_rows: list[pd.Series] = []
+    query_counts: list[int] = []
+    started = time.perf_counter()
+
+    for offset, (_, clean_row) in enumerate(X_attack.iterrows()):
+        lower, upper = _sample_bounds(clean_row, relative_bound)
+        clean_variables = clean_row.loc[list(DIRECT_MUTABLE_FEATURES)].to_numpy(
+            dtype=np.float32
+        )
+        clean_normalized = _clean_normalized_point(lower, upper, clean_variables)
+        query_count = [0]
+
+        def predict_fn(normalized: np.ndarray) -> np.ndarray:
+            decoded = _decode_normalized_variables(normalized, clean_row, lower, upper)
+            query_count[0] += len(decoded)
+            return np.asarray(model.predict_proba(decoded), dtype=np.float32)
+
+        estimator = BlackBoxClassifier(
+            predict_fn=predict_fn,
+            input_shape=(len(DIRECT_MUTABLE_FEATURES),),
+            nb_classes=2,
+            clip_values=(0.0, 1.0),
+        )
+        attack = _build_comparison_attack(
+            attack_name, estimator, parameters, verbose=verbose
+        )
+        np.random.seed(random_state + offset)
+        adversarial_normalized = attack.generate(
+            x=clean_normalized,
+            y=np.array([0], dtype=np.int64),
+        )
+        decoded = _decode_normalized_variables(
+            adversarial_normalized, clean_row, lower, upper
+        ).iloc[0]
+        decoded.name = clean_row.name
+        adversarial_rows.append(decoded)
+        query_counts.append(query_count[0])
+
+    X_adversarial = pd.DataFrame(adversarial_rows).loc[:, X_attack.columns]
+    validate_adversarial_constraints(
+        X_attack, X_adversarial, relative_bound=relative_bound
+    )
+    return X_adversarial.astype("float32"), {
+        **compatibility,
+        "attack": attack_name,
+        "attack_type": selected.loc[attack_name, "attack_type"],
+        "runtime_seconds": float(time.perf_counter() - started),
+        "total_model_queries": int(sum(query_counts)),
+        "queries_per_sample": query_counts,
+        "relative_bound": float(relative_bound),
+        "random_seed": int(random_state),
+        "attack_parameters": parameters,
+        "target_class": 0,
+        "evaluation_only": True,
+    }

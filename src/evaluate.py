@@ -65,6 +65,7 @@ def evaluate_adversarial_evasion(
     *,
     full_test_clean_fraud_recall: float,
     attack_metadata: dict[str, Any] | None = None,
+    attack_name: str = "Targeted HopSkipJump",
 ) -> tuple[dict[str, Any], Any]:
     """Evaluate actual fraud-to-legitimate evasions on selected test fraud."""
     import numpy as np
@@ -83,7 +84,7 @@ def evaluate_adversarial_evasion(
     count = len(X_clean)
     recall_under_attack = float(adversarial_predictions.mean())
     metrics = {
-        "attack_name": "Targeted HopSkipJump",
+        "attack_name": attack_name,
         "attack_success_definition": (
             "successful fraud-to-legitimate evasions divided by originally "
             "correctly detected attacked test fraud"

@@ -103,3 +103,43 @@ def plot_attack_perturbations(samples: pd.DataFrame, output_dir: str | Path) -> 
     )
     _save(fig, Path(output_dir) / "attack_perturbation_sizes.png")
     return fig
+
+
+def plot_attack_comparison(table: pd.DataFrame, output_dir: str | Path) -> list[Any]:
+    """Save success, recall, perturbation, and runtime comparison figures."""
+    directory = Path(output_dir)
+    specifications = (
+        (
+            "Attack Success Rate",
+            "Attack Success Rate Comparison",
+            "Evasion rate",
+            "attack_success_rate_comparison.png",
+        ),
+        (
+            "Recall Under Attack",
+            "Fraud Recall Under Attack",
+            "Recall",
+            "recall_under_attack_comparison.png",
+        ),
+        (
+            "Mean Perturbation",
+            "Mean Encoded-Space L2 Perturbation",
+            "Mean L2 distance",
+            "perturbation_size_comparison.png",
+        ),
+        (
+            "Runtime Seconds",
+            "Attack Runtime Comparison",
+            "Runtime (seconds)",
+            "runtime_comparison.png",
+        ),
+    )
+    figures = []
+    for column, title, ylabel, filename in specifications:
+        fig, ax = plt.subplots(figsize=(7, 4))
+        sns.barplot(data=table, x="Attack", y=column, ax=ax)
+        ax.set(title=title, xlabel="Attack", ylabel=ylabel)
+        ax.tick_params(axis="x", rotation=15)
+        _save(fig, directory / filename)
+        figures.append(fig)
+    return figures
