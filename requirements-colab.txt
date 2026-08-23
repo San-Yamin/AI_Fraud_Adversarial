@@ -1,4 +1,6 @@
-pandas
+# Match the pandas version bundled with Google Colab. Unpinned installation can
+# upgrade to pandas 3.x and conflict with google-colab, dask-cudf, and cudf.
+pandas==2.2.3
 numpy
 scikit-learn
 imbalanced-learn
