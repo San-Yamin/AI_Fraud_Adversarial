@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import time
 
@@ -208,7 +209,13 @@ def cached_concept_drift(dataset_path: str, output_path: str, n_windows: int):
     return summary, metadata, interpretation
 
 
-default_outputs = deployment_outputs or default_output_directory(PROJECT_ROOT)
+# An explicit OUTPUT_DIR (used by the Full Mode Colab notebook) must take
+# precedence over repository or hosted deployment artifacts.
+default_outputs = (
+    default_output_directory(PROJECT_ROOT)
+    if os.getenv("OUTPUT_DIR")
+    else deployment_outputs or default_output_directory(PROJECT_ROOT)
+)
 with st.sidebar:
     st.markdown(
         '<div class="brand"><div class="brand-mark">FS</div><div>'
@@ -232,6 +239,10 @@ with st.sidebar:
     )
     with st.expander("Artifact settings"):
         output_input = st.text_input("Saved outputs directory", str(default_outputs))
+        selected_mode = (
+            "Full Mode" if Path(output_input).name == "outputs_full_mode" else "Saved/deployment"
+        )
+        st.caption(f"Artifact source: {selected_mode}")
     st.caption("The dashboard reads saved artifacts only. It does not retrain models.")
 
 paths = artifact_paths(Path(output_input).expanduser())

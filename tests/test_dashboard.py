@@ -1,11 +1,14 @@
 """Dataset-free tests for Phase 6 artifact paths and prediction preprocessing."""
 
+from pathlib import Path
+
 import numpy as np
 import joblib
 
 from src.dashboard_utils import (
     artifact_paths,
     build_raw_transaction,
+    default_output_directory,
     install_sklearn_joblib_compatibility,
     predict_transaction,
     risk_label,
@@ -68,6 +71,13 @@ def test_artifact_contract_and_probability_risk_bands(tmp_path):
     assert risk_label(0.1) == "Low"
     assert risk_label(0.5) == "Medium"
     assert risk_label(0.9) == "High"
+
+
+def test_explicit_output_directory_has_highest_priority(monkeypatch, tmp_path):
+    configured = tmp_path / "outputs_full_mode"
+    configured.mkdir()
+    monkeypatch.setenv("OUTPUT_DIR", str(configured))
+    assert default_output_directory(tmp_path / "project") == configured
 
 
 def test_removed_sklearn_remainder_class_is_restored_for_joblib(monkeypatch, tmp_path):

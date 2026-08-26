@@ -54,13 +54,14 @@ def install_sklearn_joblib_compatibility() -> bool:
 
 
 def default_output_directory(project_root: str | Path) -> Path:
-    """Prefer an explicit path, then mounted Drive, then repository outputs."""
+    """Prefer explicit or full-mode artifacts before development outputs."""
     root = Path(project_root)
     candidates = []
     if os.getenv("OUTPUT_DIR"):
         candidates.append(Path(os.environ["OUTPUT_DIR"]))
     candidates.extend(
         [
+            Path("/content/drive/MyDrive/AI_Fraud_Adversarial/outputs_full_mode"),
             Path("/content/drive/MyDrive/AI_Fraud_Adversarial/outputs"),
             root / "outputs",
         ]

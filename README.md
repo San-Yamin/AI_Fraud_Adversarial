@@ -186,6 +186,21 @@ PAYSIM_DATASET_PATH=/path/to/paysim.csv \
 streamlit run app.py
 ```
 
+For a completed Full Mode run, point the dashboard to the separate Full Mode
+artifact directory:
+
+```bash
+OUTPUT_DIR=/path/to/AI_Fraud_Adversarial/outputs_full_mode \
+PAYSIM_DATASET_PATH=/path/to/paysim.csv \
+streamlit run app.py
+```
+
+In Google Colab the Full Mode notebook sets this automatically to
+`/content/drive/MyDrive/AI_Fraud_Adversarial/outputs_full_mode`. The dashboard
+then loads the Full Mode models, metrics, SHAP outputs, and figures as one
+consistent artifact set. Streamlit Community Cloud continues to use the
+validated deployment bundle because it cannot access mounted Google Drive.
+
 The dataset path is needed only for the transaction simulation and concept-drift pages.
 The overview and saved-results pages do not load the full PaySim dataset.
 
