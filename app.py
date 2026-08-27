@@ -14,6 +14,7 @@ from src.dashboard_utils import (
     available_transaction_types,
     default_dataset_path,
     default_output_directory,
+    fit_image_to_aspect_ratio,
     load_csv,
     load_json,
     load_prediction_artifacts,
@@ -131,14 +132,9 @@ st.markdown(
         border-color:#D1D5DB; border-radius:.45rem; background:#FFFFFF;
     }
     [data-testid="stAlert"] {border-radius:.55rem; border:1px solid var(--border);}
-    [data-testid="stImage"] {
-        width:100% !important; aspect-ratio:16 / 9; overflow:hidden;
-        display:flex; align-items:center; justify-content:center;
-        background:#FFFFFF; border-radius:.45rem;
-    }
+    [data-testid="stImage"] {width:100% !important; background:#FFFFFF; border-radius:.45rem;}
     [data-testid="stImage"] img {
-        display:block; width:100% !important; max-width:100% !important;
-        height:100% !important; object-fit:contain !important;
+        display:block; width:100% !important; max-width:100% !important; height:auto !important;
     }
     hr {border-color:var(--border); margin:2rem 0 1rem;}
     @media (max-width: 800px) {
@@ -173,7 +169,7 @@ def show_image(path: Path, caption: str) -> None:
     with st.container(border=True):
         st.markdown(f"**{caption}**")
         if path.is_file():
-            st.image(str(path), width="stretch")
+            st.image(fit_image_to_aspect_ratio(path), width="stretch")
         else:
             st.warning(f"Figure unavailable: `{path}`")
 

@@ -9,6 +9,7 @@ from src.dashboard_utils import (
     artifact_paths,
     build_raw_transaction,
     default_output_directory,
+    fit_image_to_aspect_ratio,
     install_sklearn_joblib_compatibility,
     predict_transaction,
     risk_label,
@@ -71,6 +72,19 @@ def test_artifact_contract_and_probability_risk_bands(tmp_path):
     assert risk_label(0.1) == "Low"
     assert risk_label(0.5) == "Medium"
     assert risk_label(0.9) == "High"
+
+
+def test_dashboard_figure_is_letterboxed_without_cropping(tmp_path):
+    from PIL import Image
+
+    source_path = tmp_path / "square.png"
+    Image.new("RGB", (900, 900), (10, 20, 30)).save(source_path)
+
+    displayed = fit_image_to_aspect_ratio(source_path)
+
+    assert displayed.size == (1600, 900)
+    assert displayed.getpixel((800, 450)) == (10, 20, 30)
+    assert displayed.getpixel((0, 0)) == (255, 255, 255)
 
 
 def test_explicit_output_directory_has_highest_priority(monkeypatch, tmp_path):

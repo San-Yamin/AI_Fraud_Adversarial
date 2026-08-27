@@ -11,6 +11,7 @@ from typing import Any, Mapping
 import joblib
 import numpy as np
 import pandas as pd
+from PIL import Image
 
 
 PAYMENT_TYPES = ("CASH_IN", "CASH_OUT", "DEBIT", "PAYMENT", "TRANSFER")
@@ -23,6 +24,52 @@ MODEL_INPUT_COLUMNS = (
     "oldbalanceDest",
     "newbalanceDest",
 )
+
+
+def fit_image_to_aspect_ratio(
+    path: str | Path,
+    aspect_ratio: tuple[int, int] = (16, 9),
+    background: tuple[int, int, int] = (255, 255, 255),
+    padding_fraction: float = 0.06,
+) -> Image.Image:
+    """Place a complete figure inside a padded fixed-ratio canvas without cropping."""
+    ratio_width, ratio_height = aspect_ratio
+    if ratio_width <= 0 or ratio_height <= 0:
+        raise ValueError("aspect_ratio values must be positive")
+    if not 0 <= padding_fraction < 0.5:
+        raise ValueError("padding_fraction must be between 0 and 0.5")
+
+    with Image.open(path) as source:
+        figure = source.convert("RGB")
+
+    target_ratio = ratio_width / ratio_height
+    if figure.width / figure.height >= target_ratio:
+        canvas_width = figure.width
+        canvas_height = int(np.ceil(figure.width / target_ratio))
+    else:
+        canvas_height = figure.height
+        canvas_width = int(np.ceil(figure.height * target_ratio))
+
+    available_width = max(1, int(canvas_width * (1 - 2 * padding_fraction)))
+    available_height = max(1, int(canvas_height * (1 - 2 * padding_fraction)))
+    scale = min(
+        available_width / figure.width,
+        available_height / figure.height,
+    )
+    displayed_size = (
+        max(1, int(figure.width * scale)),
+        max(1, int(figure.height * scale)),
+    )
+    if displayed_size != figure.size:
+        figure = figure.resize(displayed_size, Image.Resampling.LANCZOS)
+
+    canvas = Image.new("RGB", (canvas_width, canvas_height), background)
+    offset = (
+        (canvas_width - figure.width) // 2,
+        (canvas_height - figure.height) // 2,
+    )
+    canvas.paste(figure, offset)
+    return canvas
 
 
 class _DashboardRemainderColsList(UserList):
