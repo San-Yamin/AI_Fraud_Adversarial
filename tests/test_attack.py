@@ -100,6 +100,38 @@ def test_constraint_validation_enforces_dependencies_and_protected_features():
     validate_adversarial_constraints(clean, adversarial, relative_bound=0.10)
 
 
+def test_constraint_validation_accepts_float32_bounds_for_large_balances():
+    clean = encoded_rows().iloc[[2]].copy()
+    clean.loc[:, "amount"] = np.float32(50_000_000.0)
+    clean.loc[:, "oldbalanceOrg"] = np.float32(100_000_000.0)
+    clean.loc[:, "newbalanceOrig"] = np.float32(50_000_000.0)
+    clean["sender_balance_change"] = clean["oldbalanceOrg"] - clean["newbalanceOrig"]
+    clean["amount_to_sender_balance"] = clean["amount"] / clean["oldbalanceOrg"]
+
+    adversarial = clean.copy()
+    for feature in (
+        "amount",
+        "oldbalanceOrg",
+        "newbalanceOrig",
+        "oldbalanceDest",
+        "newbalanceDest",
+    ):
+        adversarial[feature] = (
+            adversarial[feature].to_numpy(dtype=np.float32) * np.float32(1.10)
+        ).astype(np.float32)
+    adversarial["sender_balance_change"] = (
+        adversarial["oldbalanceOrg"] - adversarial["newbalanceOrig"]
+    )
+    adversarial["receiver_balance_change"] = (
+        adversarial["newbalanceDest"] - adversarial["oldbalanceDest"]
+    )
+    adversarial["amount_to_sender_balance"] = (
+        adversarial["amount"] / adversarial["oldbalanceOrg"]
+    )
+
+    validate_adversarial_constraints(clean, adversarial, relative_bound=0.10)
+
+
 def test_attack_metrics_use_actual_prediction_changes():
     clean = encoded_rows().iloc[[2, 3]].copy()
     adversarial = clean.copy()

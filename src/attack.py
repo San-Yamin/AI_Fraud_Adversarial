@@ -322,10 +322,15 @@ def validate_adversarial_constraints(
     if not X_clean.index.equals(X_adversarial.index):
         raise ValueError("Clean and adversarial sample indices differ")
     direct = list(DIRECT_MUTABLE_FEATURES)
-    clean_values = X_clean[direct].to_numpy(dtype=float)
-    adversarial_values = X_adversarial[direct].to_numpy(dtype=float)
-    lower = np.maximum(0.0, clean_values * (1.0 - relative_bound))
-    upper = clean_values * (1.0 + relative_bound)
+    # Use the same float32 arithmetic as attack generation.  With large PaySim
+    # balances, comparing float32 attack outputs against independently computed
+    # float64 bounds can create a false out-of-bounds result from rounding alone.
+    clean_values = X_clean[direct].to_numpy(dtype=np.float32)
+    adversarial_values = X_adversarial[direct].to_numpy(dtype=np.float32)
+    lower = np.maximum(
+        np.float32(0.0), clean_values * np.float32(1.0 - relative_bound)
+    ).astype(np.float32)
+    upper = (clean_values * np.float32(1.0 + relative_bound)).astype(np.float32)
     if np.any(adversarial_values < lower - tolerance) or np.any(
         adversarial_values > upper + tolerance
     ):
