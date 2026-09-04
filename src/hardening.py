@@ -98,6 +98,50 @@ def train_hardened_model(
     return model
 
 
+def keep_successful_training_evasions(
+    source_model: Any,
+    X_adversarial_training: pd.DataFrame,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Keep actual training-side fraud evasions; never manufacture outcomes."""
+    if X_adversarial_training.empty:
+        raise ValueError("Adversarial training input must not be empty")
+    predictions = np.asarray(source_model.predict(X_adversarial_training)).astype(int)
+    successful = X_adversarial_training.loc[predictions == 0].copy()
+    return successful, {
+        "generated_rows": int(len(X_adversarial_training)),
+        "successful_evasion_rows": int(len(successful)),
+        "successful_evasion_rate": float((predictions == 0).mean()),
+        "retained_label": 1,
+        "source_split": "training",
+    }
+
+
+def train_weighted_hardened_model(
+    X_augmented: pd.DataFrame,
+    y_augmented: pd.Series,
+    *,
+    clean_training_rows: int,
+    adversarial_weight: float,
+    random_state: int = RANDOM_SEED,
+) -> tuple[Any, dict[str, Any]]:
+    """Fit a new XGBoost model while up-weighting appended adversarial TRAIN rows."""
+    if not 0 < clean_training_rows < len(X_augmented):
+        raise ValueError("clean_training_rows must separate clean and adversarial rows")
+    if adversarial_weight < 1:
+        raise ValueError("adversarial_weight must be at least 1")
+    weights = np.ones(len(X_augmented), dtype=np.float32)
+    weights[clean_training_rows:] = float(adversarial_weight)
+    model = build_baseline_model(random_state=random_state)
+    model.fit(X_augmented, y_augmented, sample_weight=weights)
+    return model, {
+        "clean_training_rows": int(clean_training_rows),
+        "adversarial_training_rows": int(len(X_augmented) - clean_training_rows),
+        "clean_sample_weight": 1.0,
+        "adversarial_sample_weight": float(adversarial_weight),
+        "baseline_overwritten": False,
+    }
+
+
 def select_common_correct_test_fraud(
     baseline_model: Any,
     hardened_model: Any,

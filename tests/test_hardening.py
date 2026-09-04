@@ -11,6 +11,8 @@ from src.hardening import (
     build_hardening_comparison,
     select_adversarial_training_sources,
     select_common_correct_test_fraud,
+    keep_successful_training_evasions,
+    train_weighted_hardened_model,
 )
 
 
@@ -86,6 +88,35 @@ def test_hardening_comparison_uses_actual_model_results():
     assert table.loc[0, "Recall Recovery"] == pytest.approx(.3)
     assert table.loc[0, "Reduction in Attack Success Rate"] == pytest.approx(.3)
     assert table.loc[0, "Clean Recall Change"] == pytest.approx(.02)
+
+
+def test_successful_training_evasions_are_filtered_from_actual_predictions():
+    adversarial = pd.DataFrame({"amount": [1.0, 2.5, 0.5]}, index=[10, 11, 12])
+    retained, metadata = keep_successful_training_evasions(
+        ThresholdModel(2.0), adversarial
+    )
+    assert retained.index.tolist() == [10, 12]
+    assert metadata["successful_evasion_rows"] == 2
+    assert metadata["retained_label"] == 1
+    assert metadata["source_split"] == "training"
+
+
+def test_weighted_hardening_applies_weight_only_to_appended_rows(monkeypatch):
+    class RecordingModel:
+        def fit(self, X, y, sample_weight):
+            self.sample_weight = np.asarray(sample_weight)
+            return self
+
+    recording_model = RecordingModel()
+    monkeypatch.setattr("src.hardening.build_baseline_model", lambda **_: recording_model)
+    X = pd.DataFrame({"amount": [1.0, 2.0, 3.0]})
+    y = pd.Series([0, 1, 1])
+    fitted, metadata = train_weighted_hardened_model(
+        X, y, clean_training_rows=2, adversarial_weight=25, random_state=42
+    )
+    assert fitted is recording_model
+    assert fitted.sample_weight.tolist() == [1.0, 1.0, 25.0]
+    assert metadata["adversarial_training_rows"] == 1
 
 
 def test_notebook_contains_only_phase5_cells_38_through_46():
