@@ -94,11 +94,17 @@ PHASE5_COMPARISON_CSV_PATH = METRICS_DIR / "phase5_hardening_comparison.csv"
 # Optional robustness-improvement experiment. These defaults remain bounded for
 # Colab while giving adversarial rows enough influence in the full SMOTE set.
 ROBUST_HARDENING_TRAIN_SAMPLE_SIZE = int(
-    os.getenv("ROBUST_HARDENING_TRAIN_SAMPLE_SIZE", "60" if DEVELOPMENT_MODE else "200")
+    os.getenv("ROBUST_HARDENING_TRAIN_SAMPLE_SIZE", "100" if DEVELOPMENT_MODE else "400")
 )
 ROBUST_HARDENING_TEST_SAMPLE_SIZE = int(
     os.getenv("ROBUST_HARDENING_TEST_SAMPLE_SIZE", "20" if DEVELOPMENT_MODE else "50")
 )
 ROBUST_HARDENING_ADVERSARIAL_WEIGHT = float(
-    os.getenv("ROBUST_HARDENING_ADVERSARIAL_WEIGHT", "50.0")
+    os.getenv("ROBUST_HARDENING_ADVERSARIAL_WEIGHT", "75.0")
+)
+ROBUST_HARDENING_HSJ_SHARE = float(
+    os.getenv("ROBUST_HARDENING_HSJ_SHARE", "0.45")
+)
+ROBUST_HARDENING_BOUNDARY_SHARE = float(
+    os.getenv("ROBUST_HARDENING_BOUNDARY_SHARE", "0.45")
 )
