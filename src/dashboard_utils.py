@@ -131,19 +131,37 @@ def default_dataset_path(project_root: str | Path) -> Path:
     return next((path for path in candidates if path.is_file()), candidates[0])
 
 
+def _prefer_existing(output: Path, *relative_paths: str) -> Path:
+    """Prefer the newest artifact variant, with a legacy fallback."""
+    candidates = [output / relative_path for relative_path in relative_paths]
+    return next((path for path in candidates if path.is_file()), candidates[0])
+
+
 def artifact_paths(output_dir: str | Path) -> dict[str, Path]:
-    """Return the complete Phase 1–8 dashboard artifact contract."""
+    """Return the dashboard artifact contract, preferring latest hardening results."""
     output = Path(output_dir)
     return {
         "baseline_model": output / "models" / "baseline_model.joblib",
-        "hardened_model": output / "models" / "hardened_model.joblib",
+        "hardened_model": _prefer_existing(
+            output,
+            "models/hardened_model_robustness_improved.joblib",
+            "models/hardened_model.joblib",
+        ),
         "preprocessor": output / "models" / "baseline_preprocessor.joblib",
         "feature_names": output / "models" / "feature_names.joblib",
         "phase1_metrics": output / "metrics" / "phase1_baseline_metrics.json",
         "phase4_csv": output / "metrics" / "phase4_attack_comparison.csv",
         "phase4_json": output / "metrics" / "phase4_attack_comparison.json",
-        "phase5_metrics": output / "metrics" / "phase5_hardened_metrics.json",
-        "phase5_csv": output / "metrics" / "phase5_hardening_comparison.csv",
+        "phase5_metrics": _prefer_existing(
+            output,
+            "metrics/phase5_robustness_improved_metrics.json",
+            "metrics/phase5_hardened_metrics.json",
+        ),
+        "phase5_csv": _prefer_existing(
+            output,
+            "metrics/phase5_robustness_improved_comparison.csv",
+            "metrics/phase5_hardening_comparison.csv",
+        ),
         "phase1_confusion": output / "figures" / "phase1" / "baseline_confusion_matrix.png",
         "phase1_pr_curve": output / "figures" / "phase1" / "baseline_precision_recall_curve.png",
         "shap_importance_plot": output / "shap" / "global_feature_importance_bar.png",
@@ -155,10 +173,26 @@ def artifact_paths(output_dir: str | Path) -> dict[str, Path]:
         "phase4_recall": output / "figures" / "phase4" / "recall_under_attack_comparison.png",
         "phase4_perturbation": output / "figures" / "phase4" / "perturbation_size_comparison.png",
         "phase4_runtime": output / "figures" / "phase4" / "runtime_comparison.png",
-        "phase5_clean_recall": output / "figures" / "phase5" / "clean_recall_comparison.png",
-        "phase5_attack_recall": output / "figures" / "phase5" / "recall_under_attack_comparison.png",
-        "phase5_attack_success": output / "figures" / "phase5" / "attack_success_comparison.png",
-        "phase5_confusion": output / "figures" / "phase5" / "hardened_confusion_matrix.png",
+        "phase5_clean_recall": _prefer_existing(
+            output,
+            "figures/phase5_robustness_improved/clean_recall_comparison.png",
+            "figures/phase5/clean_recall_comparison.png",
+        ),
+        "phase5_attack_recall": _prefer_existing(
+            output,
+            "figures/phase5_robustness_improved/recall_under_attack_comparison.png",
+            "figures/phase5/recall_under_attack_comparison.png",
+        ),
+        "phase5_attack_success": _prefer_existing(
+            output,
+            "figures/phase5_robustness_improved/attack_success_comparison.png",
+            "figures/phase5/attack_success_comparison.png",
+        ),
+        "phase5_confusion": _prefer_existing(
+            output,
+            "figures/phase5_robustness_improved/hardened_confusion_matrix.png",
+            "figures/phase5/hardened_confusion_matrix.png",
+        ),
         "phase7_results": output / "metrics" / "phase7_simulation_results.csv",
         "phase8_csv": output / "metrics" / "phase8_concept_drift.csv",
         "phase8_json": output / "metrics" / "phase8_concept_drift.json",

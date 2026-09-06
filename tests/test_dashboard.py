@@ -67,11 +67,33 @@ def test_saved_feature_order_and_dual_model_predictions_are_used():
 def test_artifact_contract_and_probability_risk_bands(tmp_path):
     paths = artifact_paths(tmp_path)
     assert paths["baseline_model"].name == "baseline_model.joblib"
-    assert paths["hardened_model"].name == "hardened_model.joblib"
-    assert paths["phase5_csv"].name == "phase5_hardening_comparison.csv"
+    assert paths["hardened_model"].name == "hardened_model_robustness_improved.joblib"
+    assert paths["phase5_csv"].name == "phase5_robustness_improved_comparison.csv"
     assert risk_label(0.1) == "Low"
     assert risk_label(0.5) == "Medium"
     assert risk_label(0.9) == "High"
+
+
+def test_latest_phase5_artifacts_are_preferred_with_legacy_fallback(tmp_path):
+    legacy_model = tmp_path / "models" / "hardened_model.joblib"
+    legacy_csv = tmp_path / "metrics" / "phase5_hardening_comparison.csv"
+    legacy_model.parent.mkdir(parents=True)
+    legacy_csv.parent.mkdir(parents=True)
+    legacy_model.touch()
+    legacy_csv.touch()
+
+    paths = artifact_paths(tmp_path)
+    assert paths["hardened_model"] == legacy_model
+    assert paths["phase5_csv"] == legacy_csv
+
+    latest_model = tmp_path / "models" / "hardened_model_robustness_improved.joblib"
+    latest_csv = tmp_path / "metrics" / "phase5_robustness_improved_comparison.csv"
+    latest_model.touch()
+    latest_csv.touch()
+
+    paths = artifact_paths(tmp_path)
+    assert paths["hardened_model"] == latest_model
+    assert paths["phase5_csv"] == latest_csv
 
 
 def test_dashboard_figure_is_letterboxed_without_cropping(tmp_path):

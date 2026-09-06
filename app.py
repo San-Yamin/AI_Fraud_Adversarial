@@ -362,6 +362,10 @@ elif page == "Attack Comparison":
 
 elif page == "Baseline vs Hardened":
     page_header("Baseline vs Hardened Model", "Clean performance and fresh-attack robustness after leakage-safe adversarial training.", "Phase 5")
+    if "robustness_improved" in paths["phase5_csv"].name:
+        st.caption("Latest hardening experiment: 400 training-side attack sources, adversarial weight 75, and a 45% / 45% / 10% attack mix.")
+    else:
+        st.caption("Standard Phase 5 artifacts are shown because the latest robustness-improvement artifacts are unavailable.")
     try:
         hardened_payload = load_json(paths["phase5_metrics"])
         hardened_clean = hardened_payload.get("hardened_clean_evaluation", {}).get(
