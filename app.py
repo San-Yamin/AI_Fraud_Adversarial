@@ -80,18 +80,13 @@ st.markdown(
     .dashboard-header {padding:.1rem 0 1.15rem; border-bottom:1px solid var(--border); margin-bottom:1rem;}
     .dashboard-eyebrow {font-size:.72rem; text-transform:uppercase; letter-spacing:.11em;
         color:var(--primary); font-weight:750; margin-bottom:.35rem;}
-    .dashboard-title {font-size:1.78rem; line-height:1.2; font-weight:760;
-        color:var(--text); letter-spacing:-.035em; margin:0;}
-    .dashboard-subtitle {font-size:.92rem; color:var(--muted); margin-top:.42rem; max-width:760px;}
+.dashboard-title {font-size:1.45rem; line-height:1.2; font-weight:760;
+    color:var(--text); letter-spacing:-.035em; margin:0; white-space:nowrap;}
     .page-header {margin:1.7rem 0 1.15rem;}
     .page-kicker {font-size:.7rem; text-transform:uppercase; letter-spacing:.1em;
         color:var(--primary); font-weight:750; margin-bottom:.3rem;}
     .page-title {font-size:1.45rem; font-weight:750; color:var(--text);
         letter-spacing:-.025em; margin:0;}
-    .page-description {font-size:.91rem; color:var(--muted); margin-top:.38rem; max-width:800px;}
-    .prototype-notice {padding:.75rem .95rem; border:1px solid #F3D7A1;
-        border-left:4px solid var(--warning); border-radius:.5rem;
-        background:#FFFBEB; color:#78350F; font-size:.86rem; font-weight:600; margin-bottom:1rem;}
     .workflow {display:flex; flex-wrap:wrap; gap:.45rem; align-items:center;
         padding:1rem; border:1px solid var(--border); border-radius:.65rem; background:white;}
     .workflow-step {padding:.46rem .7rem; border-radius:.4rem; background:#EFF6FF;
@@ -127,7 +122,12 @@ st.markdown(
         color:#FFFFFF !important;
         -webkit-text-fill-color:#FFFFFF !important;
         opacity:1 !important;
-    }
+    }[data-testid="stFormSubmitButton"] button,
+[data-testid="stFormSubmitButton"] button * {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    opacity: 1 !important;
+}
     div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
         border-color:#D1D5DB; border-radius:.45rem; background:#FFFFFF;
     }
@@ -148,19 +148,11 @@ st.markdown(
 )
 
 
-def show_notice() -> None:
-    st.markdown(
-        '<div class="prototype-notice">Research prototype using synthetic PaySim data. '
-        "Not a live banking system.</div>",
-        unsafe_allow_html=True,
-    )
-
-
-def page_header(title: str, description: str, kicker: str = "Research dashboard") -> None:
+def page_header(title: str, description: str = "", kicker: str = "Research dashboard") -> None:
+    """Render a compact page header without explanatory body text."""
     st.markdown(
         f'<div class="page-header"><div class="page-kicker">{kicker}</div>'
-        f'<div class="page-title">{title}</div>'
-        f'<div class="page-description">{description}</div></div>',
+        f'<div class="page-title">{title}</div></div>',
         unsafe_allow_html=True,
     )
 
@@ -231,7 +223,7 @@ with st.sidebar:
     st.markdown(
         '<div class="brand"><div class="brand-mark">FS</div><div>'
         '<div class="brand-name">Fraud Security Lab</div>'
-        '<div class="brand-meta">Adversarial robustness research</div></div></div>',
+        '<div class="brand-meta">Adversarial Improvement Lab</div></div></div>',
         unsafe_allow_html=True,
     )
     page = st.radio(
@@ -254,28 +246,19 @@ with st.sidebar:
             "Full Mode" if Path(output_input).name == "outputs_full_mode" else "Saved/deployment"
         )
         st.caption(f"Artifact source: {selected_mode}")
-    st.caption("The dashboard reads saved artifacts only. It does not retrain models.")
 
 paths = artifact_paths(Path(output_input).expanduser())
 
 st.markdown(
-    '<div class="dashboard-header"><div class="dashboard-eyebrow">CST-8415 · Security research</div>'
-    '<h1 class="dashboard-title">AI-Based Fraud Detection &amp; Adversarial Robustness</h1>'
-    '<div class="dashboard-subtitle">An evidence-led view of model performance, explainability, '
-    'adversarial exposure, hardening, simulation, and temporal stability.</div></div>',
+    '<div class="dashboard-header">'
+    '<h1 class="dashboard-title">AI-Based Fraud Detection &amp; Improved Adversarial Security</h1></div>',
     unsafe_allow_html=True,
 )
-show_notice()
 if deployment_bootstrap_error:
     st.error(f"Hosted artifact setup failed: {deployment_bootstrap_error}")
 
 if page == "Project Overview":
-    page_header(
-        "Project Overview",
-        "A security-focused machine-learning prototype for detecting fraud, explaining "
-        "decisions, evaluating adversarial evasion, and measuring defensive hardening.",
-        "System summary",
-    )
+    page_header("Project Overview", kicker="System summary")
     st.markdown(
         '<div class="info-grid">'
         '<div class="info-card"><div class="info-label">Dataset</div>'
@@ -294,15 +277,8 @@ if page == "Project Overview":
         '<span class="workflow-arrow">→</span><span class="workflow-step">Hardening</span></div>',
         unsafe_allow_html=True,
     )
-    with st.container(border=True):
-        st.markdown("**Completed experiment stages**")
-        st.caption(
-            "Baseline XGBoost detection · Tree SHAP explainability · constrained ART attacks · "
-            "multi-attack comparison · leakage-safe adversarial training"
-        )
-
 elif page == "Baseline Performance":
-    page_header("Baseline Model Performance", "Saved clean-test metrics from the original XGBoost detector.", "Phase 1")
+    page_header("Baseline Model Performance", kicker="Phase 1")
     try:
         payload = load_json(paths["phase1_metrics"])
         metric_cards(payload.get("metrics", {}))
@@ -325,8 +301,7 @@ elif page == "Baseline Performance":
         show_image(paths["phase1_pr_curve"], "Baseline precision–recall curve")
 
 elif page == "SHAP Explainability":
-    page_header("SHAP Explainability", "Global and local Tree SHAP evidence from the saved baseline model.", "Phase 2")
-    st.caption("SHAP is not recomputed in the dashboard; all plots are saved experiment outputs.")
+    page_header("SHAP Explainability", kicker="Phase 2")
     tabs = st.tabs(["Global importance", "Beeswarm", "Fraud example", "Legitimate example"])
     with tabs[0]:
         show_image(paths["shap_importance_plot"], "Global SHAP feature importance")
@@ -342,7 +317,7 @@ elif page == "SHAP Explainability":
         show_image(paths["shap_legitimate_waterfall"], "Correctly detected legitimate transaction")
 
 elif page == "Attack Comparison":
-    page_header("Multiple Attack Comparison", "A consistent comparison of constrained adversarial evasion attacks.", "Phase 4")
+    page_header("Multiple Attack Comparison", kicker="Phase 4")
     try:
         comparison = load_csv(paths["phase4_csv"])
         st.dataframe(comparison, use_container_width=True, hide_index=True)
@@ -358,14 +333,9 @@ elif page == "Attack Comparison":
         for column, (key, caption) in zip(st.columns(2), figures[row_start:row_start + 2]):
             with column:
                 show_image(paths[key], caption)
-    st.caption("Adversarial test transactions were evaluation-only and were never used for training.")
 
 elif page == "Baseline vs Hardened":
-    page_header("Baseline vs Hardened Model", "Clean performance and fresh-attack robustness after leakage-safe adversarial training.", "Phase 5")
-    if "robustness_improved" in paths["phase5_csv"].name:
-        st.caption("Latest hardening experiment: 400 training-side attack sources, adversarial weight 75, and a 45% / 45% / 10% attack mix.")
-    else:
-        st.caption("Standard Phase 5 artifacts are shown because the latest robustness-improvement artifacts are unavailable.")
+    page_header("Baseline vs Hardened Model", kicker="Phase 5")
     try:
         hardened_payload = load_json(paths["phase5_metrics"])
         hardened_clean = hardened_payload.get("hardened_clean_evaluation", {}).get(
@@ -400,8 +370,7 @@ elif page == "Baseline vs Hardened":
                 show_image(paths[key], caption)
 
 elif page == "Single Transaction":
-    page_header("Single Transaction Prediction", "Evaluate one PaySim-style transaction with the saved baseline and hardened models.", "Interactive analysis")
-    st.caption("The same saved Phase 1 preprocessor and encoded feature order are applied to both models.")
+    page_header("Single Transaction Prediction", kicker="Interactive analysis")
     try:
         baseline_model, hardened_model, preprocessor, feature_names = cached_prediction_artifacts(
             str(Path(output_input).expanduser())
@@ -446,16 +415,7 @@ elif page == "Single Transaction":
         st.info("Set the sidebar path to the outputs directory containing both models and preprocessing artifacts.")
 
 elif page == "Real-Time Simulation":
-    page_header("Real-Time Transaction Simulation", "Replay a small PaySim sequence through the hardened model and monitor running outcomes.", "Phase 7")
-    st.warning(
-        "Simulated transaction stream using synthetic PaySim data. "
-        "Not connected to any live banking system."
-    )
-    st.caption(
-        "A small class-aware sequence is read from PaySim in chunks. The actual isFraud "
-        "label is retained only for evaluation and is never passed to the model."
-    )
-
+    page_header("Real-Time Transaction Simulation", kicker="Phase 7")
     dataset_input = st.text_input(
         "PaySim CSV path", str(default_dataset_path(PROJECT_ROOT)), key="simulation_dataset"
     )
@@ -615,14 +575,7 @@ elif page == "Real-Time Simulation":
         st.info("Check the PaySim path and the saved hardened-model artifact directory.")
 
 else:
-    page_header("Concept Drift", "Evaluate hardened-model performance and feature stability across chronological PaySim windows.", "Phase 8")
-    st.warning(
-        "Concept drift analysis is simulated using PaySim step-based chronological windows."
-    )
-    st.caption(
-        "The saved hardened model is evaluated without retraining. Fixed equal-width step "
-        "ranges are compared with Window 1 as the feature-distribution reference."
-    )
+    page_header("Concept Drift", kicker="Phase 8")
     drift_dataset = st.text_input(
         "PaySim CSV path", str(default_dataset_path(PROJECT_ROOT)), key="drift_dataset"
     )
@@ -685,5 +638,3 @@ else:
                     show_image(paths[key], caption)
         st.success(f"Saved Phase 8 outputs under {Path(output_input).expanduser()}")
 
-st.divider()
-st.caption("CST-8415 research prototype · synthetic PaySim data · saved experimental artifacts only")

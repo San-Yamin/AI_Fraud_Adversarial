@@ -18,14 +18,43 @@ from src.dashboard_utils import MODEL_INPUT_COLUMNS
 
 
 DRIFT_INPUT_COLUMNS = (*MODEL_INPUT_COLUMNS, "isFraud")
-DRIFT_DTYPES = {
-    "step": "int16", "type": "category", "amount": "float32",
-    "oldbalanceOrg": "float32", "newbalanceOrig": "float32",
-    "oldbalanceDest": "float32", "newbalanceDest": "float32", "isFraud": "int8",
-}
+DRIFT_NUMERIC_COLUMNS = (
+    "step", "amount", "oldbalanceOrg", "newbalanceOrig",
+    "oldbalanceDest", "newbalanceDest", "isFraud",
+)
 DEFAULT_WINDOWS = 8
 DEFAULT_DRIFT_FEATURES = 5
 DEFAULT_FEATURE_SAMPLE = 2000
+
+
+def _clean_drift_chunk(chunk: pd.DataFrame) -> pd.DataFrame:
+    """Coerce only true numeric PaySim fields and exclude account identifiers."""
+    missing = sorted(set(DRIFT_INPUT_COLUMNS) - set(chunk.columns))
+    if missing:
+        raise ValueError(f"Drift source is missing columns: {missing}")
+
+    cleaned = chunk.loc[:, DRIFT_INPUT_COLUMNS].copy()
+    cleaned["type"] = cleaned["type"].astype("string").str.strip()
+
+    for column in DRIFT_NUMERIC_COLUMNS:
+        cleaned[column] = pd.to_numeric(cleaned[column], errors="coerce")
+
+    cleaned = cleaned.dropna(subset=list(DRIFT_INPUT_COLUMNS)).copy()
+    if cleaned.empty:
+        raise ValueError(
+            "No valid PaySim rows remain after cleaning. A text account ID such as "
+            "nameOrig/nameDest appears to be landing in a numeric field. Check the CSV schema."
+        )
+
+    cleaned = cleaned.loc[cleaned["isFraud"].isin([0, 1])].copy()
+    cleaned["step"] = cleaned["step"].astype("int32")
+    cleaned["amount"] = cleaned["amount"].astype("float32")
+    cleaned["oldbalanceOrg"] = cleaned["oldbalanceOrg"].astype("float32")
+    cleaned["newbalanceOrig"] = cleaned["newbalanceOrig"].astype("float32")
+    cleaned["oldbalanceDest"] = cleaned["oldbalanceDest"].astype("float32")
+    cleaned["newbalanceDest"] = cleaned["newbalanceDest"].astype("float32")
+    cleaned["isFraud"] = cleaned["isFraud"].astype("int8")
+    return cleaned
 
 
 def build_step_window_edges(
@@ -212,19 +241,25 @@ def analyze_concept_drift(
     if missing:
         raise ValueError(f"PaySim file is missing drift columns: {missing}")
     minimum_step, maximum_step = None, None
-    for steps in pd.read_csv(source, usecols=["step"], dtype={"step": "int16"}, chunksize=chunk_size):
-        chunk_min, chunk_max = int(steps["step"].min()), int(steps["step"].max())
+    for steps in pd.read_csv(source, usecols=["step"], chunksize=chunk_size, low_memory=False):
+        numeric_steps = pd.to_numeric(steps["step"], errors="coerce").dropna()
+        if numeric_steps.empty:
+            continue
+        chunk_min, chunk_max = int(numeric_steps.min()), int(numeric_steps.max())
         minimum_step = chunk_min if minimum_step is None else min(minimum_step, chunk_min)
         maximum_step = chunk_max if maximum_step is None else max(maximum_step, chunk_max)
+    if minimum_step is None or maximum_step is None:
+        raise ValueError("No valid numeric PaySim step values were found")
     edges = build_step_window_edges(minimum_step, maximum_step, n_windows)
     drift_features = select_drift_features(
         feature_names, importance, max_features=max_drift_features
     )
     accumulators = _empty_accumulator(n_windows)
     rngs = [np.random.default_rng(random_state + index) for index in range(n_windows)]
-    for chunk in pd.read_csv(
-        source, usecols=DRIFT_INPUT_COLUMNS, dtype=DRIFT_DTYPES, chunksize=chunk_size,
+    for raw_chunk in pd.read_csv(
+        source, usecols=list(DRIFT_INPUT_COLUMNS), chunksize=chunk_size, low_memory=False,
     ):
+        chunk = _clean_drift_chunk(raw_chunk)
         assignments = assign_step_windows(chunk["step"], edges)
         for window_index in np.unique(assignments):
             mask = assignments == window_index

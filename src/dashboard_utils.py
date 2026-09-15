@@ -117,18 +117,29 @@ def default_output_directory(project_root: str | Path) -> Path:
 
 
 def default_dataset_path(project_root: str | Path) -> Path:
-    """Resolve PaySim without loading it, supporting local and Colab demos."""
+    """Resolve PaySim without loading it, preferring the local project path."""
     root = Path(project_root)
-    candidates = []
-    if os.getenv("PAYSIM_DATASET_PATH"):
-        candidates.append(Path(os.environ["PAYSIM_DATASET_PATH"]))
-    candidates.extend(
-        [
-            Path("/content/drive/MyDrive/AI_Fraud_Adversarial/data/paysim.csv"),
-            root / "data" / "paysim.csv",
-        ]
-    )
-    return next((path for path in candidates if path.is_file()), candidates[0])
+
+    # 1) Explicit environment override, when configured and valid.
+    env_path = os.getenv("PAYSIM_DATASET_PATH")
+    if env_path:
+        candidate = Path(env_path).expanduser()
+        if candidate.is_file():
+            return candidate
+
+    # 2) Local project dataset (best default for VS Code / Streamlit Cloud).
+    local_path = root / "data" / "paysim.csv"
+    if local_path.is_file():
+        return local_path
+
+    # 3) Google Colab fallback.
+    colab_path = Path("/content/drive/MyDrive/AI_Fraud_Adversarial/data/paysim.csv")
+    if colab_path.is_file():
+        return colab_path
+
+    # If the dataset is missing, show the expected local path rather than
+    # a misleading Colab path on macOS/Linux deployment environments.
+    return local_path
 
 
 def _prefer_existing(output: Path, *relative_paths: str) -> Path:
