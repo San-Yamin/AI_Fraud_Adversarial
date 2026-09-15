@@ -28,3 +28,4 @@ outputs/models/*
 
 # Deployment bundles are downloaded at runtime, not committed.
 deployment/*.zip
+!data/paysim.csv
